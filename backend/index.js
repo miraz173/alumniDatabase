@@ -1,119 +1,58 @@
+import jwt from "jsonwebtoken";
 import express from "express";
+import bcrypt from "bcrypt";
 import mysql from "mysql";
 import cors from "cors";
 
-// const db = mysql.createConnection({
-//   host: "localhost",
-//   user: "root",
-//   password: "password",
-//   database: "test",
-// });
-
+const ip = '192.168.68.100';
 const app = express();
 app.use(cors());
-// app.use(express.json());
+app.use(express.json());
 
-// app.get("/", async (req, res) => {
-//     try {
-//       const query1=`SELECT alumni.*, GROUP_CONCAT(keywords.keywords separator', ') AS keywords
-//       FROM alumni LEFT JOIN keywords ON keywords.roll = alumni.roll GROUP BY alumni.roll`;
-//       const data1 = await new Promise((resolve, reject) => {
-//         db.query(query1, (err, data) => {
-//           if (err) {
-//             reject(err);
-//           } else {
-//             resolve(data);
-//           }
-//         });
-//       });
-
-//       return res.json(data1);
-//     } catch (err) {
-//       return res.json(err);
-//     }
-//   });
-
-// app.post("/", (req, es) => {
-//   const q = "insert into lab6.salary values(?)";
-//   const values = ["x", "17-03-2001", "4"];
-//   db.query(q, [values]);
-// });
-
-// app.listen(3001, () => {
-//   console.log("hiya kids!\n");
-// });
-
-// const express = require('express');
-// const app = express();
-// const mysql = require('mysql');
-
-// Create a MySQL connection pool
-const pool = mysql.createPool({
+const dbPool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "password",
-  database: "test",
+  database: "cse3100",
 });
 
 app.get("/", (req, res) => {
+  console.clear();
+  console.log('get called');
   const query = req.query.query;
+  const searchQuery = (query && query.toString().trim()) || "RUET";
+  // console.log("input text:", searchQuery);
 
-  let sql = `SELECT a.*, GROUP_CONCAT(k.keyword) AS keywords, 
-  ( SELECT GROUP_CONCAT(CONCAT('phone ', c.phone, ',email ', c.email, ',whatsapp ', whatsapp, ',discord ', discord, ',twitter ', twitter) SEPARATOR ', ')
-    FROM contacts c
-    WHERE c.roll = a.roll
-  ) AS contacts
-  FROM alumni a
-  JOIN keywords k ON a.roll = k.roll
-  WHERE a.roll IN `;
-  let searchQuery = { query }; //query is an object containing one variable named query.
-  searchQuery =
-    searchQuery.query.toString().length > 0 ? searchQuery.query : `RUET`;
-  console.log("input text: " + searchQuery);
+  const keywords = searchQuery.split(",").map((keyword) => keyword.trim());
+  const keywordList = keywords.map((keyword) => `'${keyword}'`).join(",");
+  const keywordList2 = keywords.map((keyword) => `'%${keyword}%'`).join(" or keywords.attribute like ");
+  // console.log(keywordList2);
 
-  let sq = searchQuery.split(",");
-  for (let i = 0; i < sq.length; i++) {
-    //remove unwanted space from elements
-    let dec = 0;
-    if (sq[i][0] == " ") {
-      sq[i] = sq[i].slice(1);
-      if (sq[i][0] == " ") dec = 1; //work with same element by decrementing i if space still exists at beginning
-    }
-    if (sq[i][sq[i].length - 1] == " ") {
-      sq[i] = sq[i].slice(0, -1);
-      if (sq[i][sq[i].length - 1] == " ") dec = 1; //if ' ' still remains at end of string, process that string again to remove the space
-    }
-    dec == 1 ? i-- : i; //decrement i to reprocess the string again to remove space at beginning or at end
-  }
+  const sql = `
+  select  a.*, 
+  CONCAT_WS(', ', a.roll, higherEd, state, country, attributes) AS keywords 
+  from alumni a
+  join keywords on keywords.roll=a.roll 
+  where keywords.attribute in (${keywordList})
+  GROUP BY a.roll
+  HAVING COUNT(DISTINCT keywords.attribute) = ${keywords.length};`;
 
-  if (searchQuery.split(",").length == 1) {
-    sql += `
-    ( SELECT roll
-      FROM keywords
-      WHERE keyword LIKE ?
-    ) GROUP BY a.roll;`;
-    searchQuery = `%` + sq[0] + `%`;
-    console.log("modified key: " + searchQuery);
-  } 
-  else {
-    const keywordList = sq.map((keyword) => `'${keyword}'`).join(","); //[ab, cd]-->'ab','cd'
-    console.log("modified keys: " + keywordList);
-    sql += `
-    ( SELECT a.roll FROM alumni a 
-      JOIN keywords k ON a.roll = k.roll 
-      WHERE k.keyword IN (${keywordList}) 
-      GROUP BY a.roll, a.name 
-      HAVING COUNT(DISTINCT k.keyword) = ${sq.length} 
-    ) GROUP BY a.roll, a.name;`;
-  }
+  const sql2 = `
+  select  a.*, 
+  CONCAT_WS(', ', a.roll, higherEd, state, country, attributes) AS keywords 
+  from alumni a
+  join keywords on keywords.roll=a.roll 
+  where keywords.attribute like ${keywordList2}
+  GROUP BY a.roll
+  HAVING COUNT(DISTINCT keywords.attribute) = ${keywords.length};`;
 
-  pool.getConnection((err, connection) => {
+  dbPool.getConnection((err, connection) => {
     if (err) {
       console.error("Error connecting to MySQL:", err);
       res.sendStatus(500);
     } else {
-      connection.query(sql, [searchQuery], (error, results) => {
-        connection.release(); // Release the connection back to the pool
+      connection.query(sql2, (error, results) => {
+        connection.release();
         if (error) {
           console.error("Database query error:", error);
           res.sendStatus(500);
@@ -125,7 +64,191 @@ app.get("/", (req, res) => {
   });
 });
 
-// Start the server
-app.listen(3001, () => {
+app.post("/", (req, res) => {
+  console.clear();
+  console.log('post called');
+
+  const person = req.body;
+
+  const personArr = [
+    person.roll,
+    person.name,
+    person.thumbnail,
+    person.image,
+    person.position,
+    person.company,
+    person.higherEd,
+    person.city,
+    person.state,
+    person.country,
+    person.contacts,
+    person.about,
+    person.attributes,
+    person.password
+  ];
+
+  const sql = `
+    INSERT INTO cse3100.alumni (roll, name, thumbnail, image, position, higherEd, company, city, state, country, contacts, about, attributes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) as pdata
+    ON DUPLICATE KEY UPDATE
+      name = pdata.name,
+      thumbnail = pdata.thumbnail,
+      image = pdata.image,
+      position = pdata.position,
+      company = pdata.company,
+      higherEd = pdata.higherEd,
+      city = pdata.city,
+      state = pdata.state,
+      country = pdata.country,
+      contacts = pdata.contacts,
+      about = pdata.about,
+      attributes=pdata.attributes;
+    `; //doesn't have password verification embedded in it.
+
+  const sql2 = `INSERT INTO cse3100.alumni (roll, name, thumbnail, image, position, company, higherEd, city, state, country, contacts, about, attributes)
+  SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  FROM DUAL
+  WHERE EXISTS (
+    SELECT 1
+    FROM users
+    WHERE users.roll = roll AND users.password = ?
+  )
+  ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    thumbnail = VALUES(thumbnail),
+    image = VALUES(image),
+    position = VALUES(position),
+    company = VALUES(company),
+    higherEd = VALUES(higherEd),
+    city = VALUES(city),
+    state = VALUES(state),
+    country = VALUES(country),
+    contacts = VALUES(contacts),
+    about = VALUES(about),
+    attributes = VALUES(attributes);
+  `
+
+  dbPool.getConnection((err, connection) => {
+    if (err) {
+      console.log("Error connecting to MySQL:", err);
+      res.sendStatus(500);
+    } else {
+      connection.query(sql2, personArr, (error, results) => {
+        connection.release();
+        if (error) {
+          console.error("Database query error:", error);
+          res.sendStatus(500);
+        } else {
+          res.json(results);
+        }
+      });
+    }
+  });
+});
+
+app.post("/login", (req, res) => {
+  const { roll, password } = req.body;
+
+  dbPool.getConnection((err, connection) => {
+    if (err) {
+      console.error("Error connecting to MySQL:", err);
+      res.sendStatus(500);
+    } else {
+      const query = "SELECT * FROM users WHERE roll = ?";
+      connection.query(query, [roll], (error, results) => {
+        connection.release();
+        if (error) {
+          console.error("Database query error:", error);
+          res.sendStatus(500);
+        } else {
+          if (results.length > 0) {
+            const user = results[0];
+
+            const providedPasswordUtf8 = Buffer.from(
+              password.trim(),
+              "utf-8"
+            ).toString("utf-8");
+            const storedPasswordUtf8 = Buffer.from(
+              user.password.trim(),
+              "utf-8"
+            ).toString("utf-8");
+
+            // Compare the passwords
+
+            // stored password is in hashed form
+            // bcrypt.compare(
+            //   providedPasswordUtf8,
+            //   storedPasswordUtf8,
+            //   (bcryptError, bcryptResult) => {
+            //     if (bcryptError) {
+            //       console.error("Bcrypt error:", bcryptError);
+            //       res.sendStatus(500);
+            //     } else if (bcryptResult) {
+            //       console.log("Password matched!");
+            //       // If passwords match, generate a JWT and send it as a response
+            //       const token = jwt.sign({ userId: user.roll }, "your_secret_key", {
+            //         expiresIn: "1h",
+            //       });
+            //       res.json({ token });
+            //     } else {
+            //       console.log("Passwords don't match:", password, user.password);
+            //       // Passwords don't match
+            //       res.status(401).json({ message: "Authentication failed" });
+            //     }
+            //   }
+            // );
+
+            // stored password is non hashed password
+            if (providedPasswordUtf8 === storedPasswordUtf8) {
+              console.log("Password matched!");
+              // If passwords match, generate a JWT and send it as a response
+              const token = jwt.sign({ userId: user.roll }, "your_secret_key", {
+                expiresIn: "1h",
+              });
+              res.json({ token });
+            } else {
+              console.log("Passwords don't match:", password, user.password);
+              // Passwords don't match
+              res.status(401).json({ message: "Authentication failed" });
+            }
+
+          }
+          else {
+            console.log("user not found !");
+            // User not found
+            res.status(401).json({ message: "Authentication failed" });
+          }
+        }
+      });
+    }
+  });
+});
+
+app.post("/kahoot", (req, res) => {
+  console.log('kahoot called');
+  let sql = `SELECT attribute, COUNT(*) AS attCount
+  FROM keywords
+  GROUP BY attribute
+  ORDER BY attCount DESC
+  LIMIT 7;`;
+  dbPool.getConnection((err, connection) => {
+    if (err) {
+      console.log("Error connecting to MySQL:", err);
+      res.sendStatus(500);
+    } else {
+      connection.query(sql, (error, results) => {
+        connection.release();
+        if (error) {
+          console.error("Database query error:", error);
+          res.sendStatus(500);
+        } else {
+          res.json(results);
+        }
+      });
+    }
+  });
+})
+
+app.listen(3001, ip, () => {
   console.log("Server is running on port 3001");
 });
