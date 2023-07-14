@@ -1,42 +1,35 @@
 'use client'
-import React from "react";
-import {createContext, useEffect, useState } from "react";
-// import axios from "axios";
-import * as c from './comps'
-import ProfileEdit from "./pages/profile";
+import * as c from './comps';
+import React, { useEffect, useState } from "react";
 
 const Books = () => {
-  const [myObject, setMyObject] = useState([]);
-
-  const updateObject = (newObject) => {
-    setMyObject(newObject);
-  };
-  
+  const [pInfo, setPInfo] = useState([]);
   const [query, setQuery] = useState("");
-  //my edit to update searchtext from interaction with other components
-  const upSrchTxt = (txtvalue) => {
-    if(query==''){
-      setQuery(txtvalue);
-    }
-    else
-      setQuery(query+', '+txtvalue);
-  };
-  //setObject takes an extra click to be updated. this will immediately update the query value.
-  useEffect(() => {}, [query]);
+  const [logged, setLogged] = useState(0);
+  const [person, setPerson] = useState(0);
+
+  const upSrchTxt = (txtvalue) => setQuery(query ? `${query}, ${txtvalue}` : txtvalue);
+  const updatePInfo = (newObject) => setPInfo(newObject);
+  const updateLogged = (newLogged) => setLogged(newLogged);
+  const updatePerson = (newPerson) => setPerson(newPerson);
+
+  useEffect(() => { }, [query]);
 
   return (
     <>
-      <main className="overflow-hidden text-center bg-color-[#faebd7] dark:text-slate-200 light:bg-#edebea">
-        <div className="snap-mandatory snap-y overflow-auto h-screen mr-[-25px] pr-[0px]">
+      <main className="w-[100vw] overflow-hidden text-center bg-color-[#faebd7] dark:text-slate-200 m-auto">
+        <div className="snap-mandatory snap-y overflow-auto h-screen mr-[-15px] pr-[0px]">
           <c.Background />
-          {/* <c.SearchSection updateObject={updateObject} upSrchTxt={upSrchTxt} query={query}  setQuery={setQuery}/>
-          <c.Horizontal />
-          {myObject.length>0 && <c.PersonSection books={myObject} upSrchTxt={upSrchTxt} />}
-          <c.Horizontal />
-          <c.Newsletter /> */}
-          <ProfileEdit/>
+          {!logged && (
+            <>
+              <c.SearchSection updatePInfo={updatePInfo} upSrchTxt={upSrchTxt} query={query} setQuery={setQuery} />
+              <c.PersonSection informations={pInfo} upSrchTxt={upSrchTxt} />
+              <c.Newsletter updateLogged={updateLogged} updatePerson={updatePerson} />
+            </>
+          )}
+          {logged === 1 && <c.ProfileEdit gperson={person} updateLogged={updateLogged} />}
         </div>
-       </main>
+      </main>
     </>
   );
 };
