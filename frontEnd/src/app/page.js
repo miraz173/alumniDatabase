@@ -17,17 +17,18 @@ const Books = () => {
 
   return (
     <>
-      <main className="w-[100vw] overflow-hidden text-center bg-color-[#faebd7] dark:text-slate-200 m-auto">
-        <div className="snap-mandatory snap-y overflow-auto h-screen mr-[-15px] pr-[0px]">
+      <main className="w-[100vw] overflow-auto text-center bg-color-[#faebd7] dark:text-slate-200 m-auto">
+        <div className="snap-mandatory snap-y h-screen mr-[-15px] pr-[0px]">
           <c.Background />
           {!logged && (
             <>
               <c.SearchSection updatePInfo={updatePInfo} upSrchTxt={upSrchTxt} query={query} setQuery={setQuery} />
               <c.PersonSection informations={pInfo} upSrchTxt={upSrchTxt} />
-              <c.Newsletter updateLogged={updateLogged} updatePerson={updatePerson} />
+              <c.FooterSection updateLogged={updateLogged} updatePerson={updatePerson} />
             </>
           )}
           {logged === 1 && <c.ProfileEdit gperson={person} updateLogged={updateLogged} />}
+          {logged === 2 && <c.RegisterProfile updateLogged={updateLogged} updatePerson={updatePerson} />}
         </div>
       </main>
     </>
