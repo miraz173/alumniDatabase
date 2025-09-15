@@ -1,3 +1,4 @@
+import { config } from "dotenv";
 import express from "express";
 import bcrypt from "bcrypt";
 import mysql from "mysql2";
@@ -473,4 +474,5 @@ app.get("/topKeywords", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port} since ${new Date().toLocaleString()}, ain't it?`);
 });
+
 
