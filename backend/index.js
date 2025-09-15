@@ -1,10 +1,7 @@
-import { config } from "dotenv";
-import jwt from "jsonwebtoken";
 import express from "express";
 import bcrypt from "bcrypt";
 import mysql from "mysql2";
 import cors from "cors";
-import { stat } from "fs";
 
 let saltRounds = 10;
 const port = process.env.PORT || 3001;
@@ -476,3 +473,4 @@ app.get("/topKeywords", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port} since ${new Date().toLocaleString()}, ain't it?`);
 });
+
