@@ -2,7 +2,93 @@ import axios from "axios";
 import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
 
-const ipNport = 'http://192.168.68.100:3001/';
+// const ipNport = "http://localhost:3001/";
+const ipNport = "https://alumniserver.up.railway.app/";
+
+// 🔹 Helper: Format contacts fields into a single string
+const formatContacts = (person) => {
+  return `phone ${person.phone || ""}, email ${person.email || ""}, facebook ${person.facebook || ""
+    }, ${person.socialmedia || ""}`;
+};
+
+// 🔹 Helper: Parse contacts string back into fields
+const parseContacts = (contacts = "") => {
+  const parts = contacts.split(", ");
+  return {
+    phone: parts[0]?.split(" ")[1] || "",
+    email: parts[1]?.split(" ")[1] || "",
+    facebook: parts[2]?.split(" ")[1] || "",
+    socialmedia: parts.slice(3).join(", ").trim() || "",
+  };
+};
+
+// 🔹 Reusable input component
+const FormInput = ({
+  label,
+  name,
+  type = "text",
+  value,
+  onChange,
+  placeholder = "",
+  required = false,
+  pattern,
+  colspan = 2,
+}) => (
+  <div className={`sm:col-span-${colspan}`}>
+    <label
+      htmlFor={name}
+      className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+    >
+      {label} {required && <p className="inline text-red-500">*</p>}
+    </label>
+    <div className="mt-2">
+      <input
+        type={type}
+        name={name}
+        id={name}
+        autoComplete={name}
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        pattern={pattern}
+        className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm
+          ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
+          focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+      />
+    </div>
+  </div>
+);
+
+// 🔹 Reusable textarea component
+const FormTextarea = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder = "",
+}) => (
+  <div className="col-span-full">
+    <label
+      htmlFor={name}
+      className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+    >
+      {label}
+    </label>
+    <div className="mt-2">
+      <textarea
+        name={name}
+        id={name}
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="block pl-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm
+          ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
+          focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+      />
+    </div>
+  </div>
+);
 
 
 export function Horizontal() {
@@ -13,7 +99,8 @@ export function Horizontal() {
         width: "100%",
         height: "1px",
         backgroundColor: "aqua",
-      }}>
+      }}
+    >
       <br />
     </div>
   );
@@ -25,15 +112,15 @@ export function Background() {
       <div
         className="aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30"
         style={{
-          // clipPath: "polygon(24% 8%, 27% 7%, 25% 1%, 28% 5%, 34% 14%, 35% 10%, 40% 19%, 41% 15%, 43% 26%, 52% 26%, 61% 25%, 70% 25%, 76% 31%, 72% 34%, 74% 40%, 70% 44%, 64% 45%, 59% 51%, 58% 58%, 59% 66%, 63% 73%, 63% 69%, 66% 75%, 65% 60%, 70% 60%, 73% 53%, 77% 89%, 76% 95%, 72% 89%, 71% 100%, 67% 83%, 64% 77%, 60% 88%, 58% 82%, 57% 90%, 53% 91%, 49% 86%, 48% 94%, 45% 86%, 43% 94%, 39% 89%, 36% 93%, 35% 80%, 35% 69%, 32% 60%, 26% 58%, 23% 52%, 26% 41%, 33% 39%, 30% 31%, 27% 28%, 22% 24%, 22% 15%)",
           clipPath:
             "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-        }}></div>
+        }}
+      ></div>
     </div>
   );
 }
 
-export function KeyButton({ title, num, upSrchTxt }) {
+export function KeyButton({ title, count="", num, upSrchTxt }) {
   let btnclrs = {
     1: "bg-red-50 text-red-700 ring-red-600/10",
     2: "bg-gray-50 text-gray-600 ring-gray-500/10",
@@ -53,8 +140,9 @@ export function KeyButton({ title, num, upSrchTxt }) {
     return (
       <button
         onClick={handleClick}
-        className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]}`}>
-        {title}
+        className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]}`}
+      >
+        {title} {count!=="" &&<span className="ml-1 text-xs">({count})</span>}
       </button>
     );
   }
@@ -103,11 +191,17 @@ export function SocialButton(props) {
       "M13.492 18.136v-5.272h1.665v7.022H.13v-7.022h1.665v5.272z M3.632 12.364l8.173 1.795.346-1.727-8.173-1.796-.346 1.728zm1.082-4.091l7.567 3.704.692-1.59-7.568-3.728-.691 1.614zm2.097-3.91l6.421 5.614 1.06-1.34L7.87 3.022l-1.06 1.34zM10.962.206L9.622 1.25l4.973 7.045 1.34-1.045L10.962.205zM3.46 16.364h8.346v-1.75H3.46v1.75z",
   };
 
-  let link = props.title == 'phone' ? 'tel:' + props.link : props.title == 'email' ? 'mailto:' + props.link : props.link;
+  let link =
+    props.title == "phone"
+      ? "tel:" + props.link
+      : props.title == "email"
+        ? "mailto:" + props.link
+        : props.link;
 
-  let defaultPath = "M3.19 9.345a.97.97 0 0 1 1.37 0 .966.966 0 0 1 0 1.367l-2.055 2.052a1.932 1.932 0 0 0 0 2.735 1.94 1.94 0 0 0 2.74 0l4.794-4.787a.966.966 0 0 0 0-1.367.966.966 0 0 1 0-1.368.97.97 0 0 1 1.37 0 2.898 2.898 0 0 1 0 4.103l-4.795 4.787a3.879 3.879 0 0 1-5.48 0 3.864 3.864 0 0 1 0-5.47L3.19 9.344zm11.62-.69a.97.97 0 0 1-1.37 0 .966.966 0 0 1 0-1.367l2.055-2.052a1.932 1.932 0 0 0 0-2.735 1.94 1.94 0 0 0-2.74 0L7.962 7.288a.966.966 0 0 0 0 1.367.966.966 0 0 1 0 1.368.97.97 0 0 1-1.37 0 2.898 2.898 0 0 1 0-4.103l4.795-4.787a3.879 3.879 0 0 1 5.48 0 3.864 3.864 0 0 1 0 5.47L14.81 8.656z";
+  let defaultPath =
+    "M3.19 9.345a.97.97 0 0 1 1.37 0 .966.966 0 0 1 0 1.367l-2.055 2.052a1.932 1.932 0 0 0 0 2.735 1.94 1.94 0 0 0 2.74 0l4.794-4.787a.966.966 0 0 0 0-1.367.966.966 0 0 1 0-1.368.97.97 0 0 1 1.37 0 2.898 2.898 0 0 1 0 4.103l-4.795 4.787a3.879 3.879 0 0 1-5.48 0 3.864 3.864 0 0 1 0-5.47L3.19 9.344zm11.62-.69a.97.97 0 0 1-1.37 0 .966.966 0 0 1 0-1.367l2.055-2.052a1.932 1.932 0 0 0 0-2.735 1.94 1.94 0 0 0-2.74 0L7.962 7.288a.966.966 0 0 0 0 1.367.966.966 0 0 1 0 1.368.97.97 0 0 1-1.37 0 2.898 2.898 0 0 1 0-4.103l4.795-4.787a3.879 3.879 0 0 1 5.48 0 3.864 3.864 0 0 1 0 5.47L14.81 8.656z";
 
-  if (props.link != 'undefined') {
+  if (props.link != "undefined") {
     return (
       <a href={link} target="_blank" rel="noopener noreferrer">
         <button
@@ -115,27 +209,28 @@ export function SocialButton(props) {
           data-te-ripple-init
           data-te-ripple-color="light"
           className={`cursor-alias mb-2 inline-block rounded px-3 py-2 text-xs ${color[props.title]
-            } font-medium uppercase leading-normal shadow-md transition duration-150 ease-in-out hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg`}>
+            } font-medium uppercase leading-normal shadow-md transition duration-150 ease-in-out hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg`}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
             fill="currentColor"
-            viewBox="0 0 24 24">
+            viewBox="0 0 24 24"
+          >
             <path d={path[props.title] ? path[props.title] : defaultPath} />
           </svg>
         </button>
       </a>
     );
   }
-
 }
 
-export function PersonCard({ props, upSrchTxt }) {
+export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
   const [pop, setPop] = useState(0);
   useEffect(() => { }, [pop]);
   const openPop = (val) => {
     setPop(val);
-  }
+  };
 
   let kbuttons = [];
   if (props.keywords) {
@@ -143,7 +238,12 @@ export function PersonCard({ props, upSrchTxt }) {
     let rndm = Math.floor(Math.random() * 7) + 1;
     for (let i = 0; i < objarr.length; i++) {
       kbuttons.push(
-        <KeyButton title={objarr[i]} num={rndm++} upSrchTxt={upSrchTxt} key={i} />
+        <KeyButton
+          title={objarr[i]}
+          num={rndm++}
+          upSrchTxt={upSrchTxt}
+          key={i}
+        />
       );
       rndm = rndm >= 8 ? 1 : rndm;
     }
@@ -155,9 +255,6 @@ export function PersonCard({ props, upSrchTxt }) {
     for (let i = 0; i < pArr.length; i++) {
       pArr[i] = pArr[i].trim();
       let scl = pArr[i].split(" ");
-      // if (scl.length > 2) {
-      //   scl.shift();
-      // }
       if (!scl[1]) {
         continue;
       }
@@ -169,23 +266,27 @@ export function PersonCard({ props, upSrchTxt }) {
 
   return (
     <>
-      {/*self-start makes the card's height remain independent of other card height in the same row of grid*/}
-      {/*flex flex-col  */}
-      {pop === 0 &&
-        <div className="snap-start md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20">
+      {pop === 0 && (
+        <div className={`${snap} md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
           <div
             className="flex flex-wrap items-center p-3"
-            style={{ justifyContent: "space-between" }}>
+            style={{ justifyContent: "space-between" }}
+          >
             <div className="text-left pl-[1vw]">
-              <button style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }} onClick={() => openPop(1)}>{props.name}
+              <button
+                style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }}
+                onClick={() => openPop(1)}
+              >
+                {props.name}
               </button>
               <p style={{ fontSize: "1.5vh" }}>
-                {props.position}{(props.company) ? ',' : ''} {props.company}
+                {props.position}
+                {props.company ? "," : ""} {props.company}
               </p>
             </div>
             <div className="float-center pr-[1vw]">
               <Image
-                src={props.thumbnail ? props.thumbnail : '/vercel.svg'}//image link here
+                src={props.thumbnail ? props.thumbnail : "/ruet.png"} //image link here
                 alt="profile"
                 className="relative m-auto w-[4vh] h-[4vh] overflow-hidden rounded-full"
                 height={"80"}
@@ -197,31 +298,33 @@ export function PersonCard({ props, upSrchTxt }) {
           <div style={{ fontSize: "x-small" }} className="pb-1.5 mt-1">
             {kbuttons}
           </div>
-          <div
-            style={{
-              backgroundColor: "#e5d5de",
-              width: "100%",
-              height: "1px",
-              marginBottom: "1.5px",
-            }}></div>
-          <div className="bottom-0 mt-auto">{sbuttons}</div>
+          {sbuttons.length > 0 && (
+            <>
+              <div
+                style={{
+                  backgroundColor: "#e5d5de",
+                  width: "100%",
+                  height: "1px",
+                  marginBottom: "1.5px",
+                }}
+              ></div>
+              <div className="bottom-0 mt-auto">{sbuttons}</div>
+            </>
+          )}
         </div>
-      }
+      )}
       {pop === 1 && <PersonDesc props={props} openPop={openPop} />}
     </>
   );
 }
 
-export function PersonDesc({ props, openPop }) {
+export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
   let sbuttons = [];
   if (props.contacts) {
     let pArr = props.contacts.split(",");
     for (let i = 0; i < pArr.length; i++) {
       pArr[i] = pArr[i].trim();
       let scl = pArr[i].split(" ");
-      // if (scl.length > 2) {
-      //   scl.shift();
-      // }
       if (!scl[1]) {
         continue;
       }
@@ -232,38 +335,66 @@ export function PersonDesc({ props, openPop }) {
   }
   return (
     <>
-      <div className="snap-start text-sm text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0  bg-pink-50 dark:text-black">
-
+      <div className={`${snap} text-sm text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0 bg-pink-50 dark:text-black`}>
         <div className="float-center pr-[1vw]">
           <Image
-            src={props.image ? props.image : '/vercel.svg'}
+            src={props.image ? props.image : "/ruet.png"}
             alt="profile"
             className="relative m-auto w-[12vh] h-[12vh] overflow-hidden rounded-full"
             height={"120"}
             width={"120"}
           />
         </div>
-        <br />
-        <button onClick={() => openPop(0)} className="text-blue-600 text-lg">{props.name}</button>
-        <h4>{props.position}{props.company ? ', ' + props.company : ''}</h4>
-        <br />
-        <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
-        <p>{props.about}</p>
-        <br />
-        <h2 className="text-cyan-400 underline">Higher Education</h2>
-        <p>{props.higherEd}</p>
-        <br />
-        <h2 className="text-cyan-400 underline">Related Attributes</h2>
-        <p>{props.attributes}</p>
-        <br />
-        <h2 className="text-cyan-400 underline">Living In</h2>
-        <p>{props.city}{props.state ? ', ' + props.state : ''}{props.country ? ', ' + props.country : ''} </p>
-        <br />
-        <h2 className="text-cyan-400 underline pb-1">Contacts</h2>
-        <div className="bottom-0 mt-auto">{sbuttons}</div>
+        {props.name && (
+          <button onClick={() => openPop(0)} className="text-blue-600 text-lg">
+            {props.name}
+          </button>
+        )}
+        {(props.position || props.company) && (
+          <h4>
+            {props.position}
+            {props.company ? ", " + props.company : ""}
+          </h4>
+        )}
+        {props.about && (
+          <>
+            <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
+            <p>{props.about}</p>
+          </>
+        )}
+        {props.higherEd && (
+          <>
+            <h2 className="text-cyan-600 underline">Higher Education</h2>
+            <p>{props.higherEd}</p>
+            <br />
+          </>
+        )}
+        {props.attributes && (
+          <>
+            <h2 className="text-cyan-400 underline">Related Attributes</h2>
+            <p>{props.attributes}</p>
+          </>
+        )}
+        {(props.city || props.state || props.country) && (
+          <>
+            <h2 className="text-cyan-400 underline">Living In</h2>
+            <p>
+              {props.city}
+              {props.state ? ", " + props.state : ""}
+              {props.country ? ", " + props.country : ""}{" "}
+            </p>
+            <br />
+          </>
+        )}
+        {sbuttons.length > 0 && (
+          <>
+            <h2 className="text-cyan-400 underline pb-1">Contacts</h2>
+            <div className="bottom-0 mt-auto">{sbuttons}</div>
+          </>
+        )}
       </div>
     </>
-  )
+  );
 }
 
 export function PersonSection({ informations, upSrchTxt }) {
@@ -290,18 +421,23 @@ export function PersonSection({ informations, upSrchTxt }) {
       </>
     );
   }
-
 }
 
 export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
-  console.clear();
   const [kb, setKb] = useState([]);
 
   useEffect(() => {
-    axios.post(ipNport + `kahoot`)
+    axios
+      .get(ipNport + `topKeywords`)
       .then((response) => {
         const buttons = response.data.map((data, index) => (
-          <KeyButton title={data.attribute} num={index % 7 + 1} upSrchTxt={upSrchTxt} key={index} />
+          <KeyButton
+            title={data.attribute}
+            count={data.attCount}
+            num={(index % 7) + 1}
+            upSrchTxt={upSrchTxt}
+            key={index}
+          />
         ));
         setKb(buttons);
       })
@@ -310,22 +446,21 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
       });
   }, [upSrchTxt]);
 
-  const handleSearch = async (event) => {
+  const similarSearch = async (event, x) => {
     event.preventDefault();
     try {
-      const response = await axios.get(
-        // `http://localhost:3001/?query=${encodeURIComponent(query)}`
-        ipNport + `?query=${encodeURIComponent(query)}`
-      );
-      if (response.data.length == 0) {
+      const url = `${ipNport}search?query=${encodeURIComponent(x + query)}`;
+      const response = await axios.get(url);
+      if (response.data.length === 0) {
         alert("No data found related to the term/terms :(");
+      } else {
+        updatePInfo(response.data);
+        console.log(url);
       }
-      else updatePInfo(response.data);//setResults(response.data);
     } catch (error) {
       console.error("Error:", error);
     }
   };
-
 
   return (
     <>
@@ -334,9 +469,10 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
           style={{
             padding: "4%",
             fontFamily: "Courier New, Courier, monospace",
-          }}>
+          }}
+        >
           <Image
-            src={"/icon3100.png"}
+            src={"/ruet.png"}
             alt="ruet logo"
             width={100}
             height={100}
@@ -348,61 +484,70 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
           </h2>
         </div>
 
-        <div style={{ width: "75%", paddingLeft: "25%", paddingBottom: "4%" }}>
-          <form onSubmit={handleSearch}>
-            <label
-              htmlFor="default-search"
-              className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">
-              Search
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg
-                  aria-hidden="true"
-                  className="w-5 h-5 text-gray-500 dark:text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                }}
-                id="default-search"
-                className="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                placeholder="Search by Name, Position, Organisation..."
-                required
-              />
+        <div className="w-[85%] md:w-[75%] pl-[15%] md:pl-[25%] pb-16 md:pb-[4%]">
+          {/* <form onSubmit={handleSearch}> */}
+          <label
+            htmlFor="default-search"
+            className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white"
+          >
+            Search
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg
+                aria-hidden="true"
+                className="w-5 h-5 text-gray-500 dark:text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+              id="default-search"
+              className="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              placeholder="Search by Name, Position, Organisation..."
+              required
+            />
+            <div className="absolute md:right-2.5 md:bottom-2.5 flex flex-row pt-1 md:pt-0">
               <button
-                type="submit"
-                className="text-white absolute right-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                Search
+                onClick={(event) => similarSearch(event, "1")}
+                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1 md:py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 mr-2"
+              >
+                Exact Search
+              </button>
+              <button
+                onClick={(event) => similarSearch(event, "2")}
+                className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1 md:py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+              >
+                Similar Search
               </button>
             </div>
-          </form>
+          </div>
+          {/* </form> */}
         </div>
-        <div>
-          {kb}
-        </div>
+        <div>{kb}</div>
       </div>
     </>
-  )
+  );
 }
 
-export function Newsletter({ updateLogged, updatePerson }) {
+export function FooterSection({ updateLogged, updatePerson }) {
   return (
     <>
       <Horizontal />
-      <div className="snap-start relative inset-x-0 bottom-0 isolate overflow-hidden bg-gray-900 pb-8 pt-10 sm:pt-16 lg:pt-20 text-left">
+      <div className="snap-end relative inset-x-0 bottom-0 isolate overflow-hidden bg-gray-900 pb-8 pt-10 sm:pt-16 lg:pt-20 text-left">
         <div className="mx-auto px-5 lg:px-7">
           <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-2 gap-y-12 lg:max-w-none lg:grid-cols-2">
             <div className="max-w-xl lg:max-w-lg mx-auto lg:order-first sm:order-last order-last">
@@ -410,12 +555,25 @@ export function Newsletter({ updateLogged, updatePerson }) {
                 Contact Us
               </h2>
               <p className="mt-4 text-lg leading-8 text-gray-300">
-                FotkaHub Inc.<br />
-                Dept. of Computer Science and Engineering<br />
-                Rajshahi University of Engineering and Technology<br />
-                <SocialButton title={'phone'} link={'+8801860424939'} key={2} />&nbsp;
-                <SocialButton title={'email'} link={'miraz173r@gmail.com'} key={3} />&nbsp;
-                <SocialButton title={'facebook'} link={'Miriam_Libre.com'} key={1} />
+                FotkaHub Inc.
+                <br />
+                Dept. of Computer Science and Engineering
+                <br />
+                Rajshahi University of Engineering and Technology
+                <br />
+                <SocialButton title={"phone"} link={"+8801860424939"} key={2} />
+                &nbsp;
+                <SocialButton
+                  title={"email"}
+                  link={"miraz173r@gmail.com"}
+                  key={3}
+                />
+                &nbsp;
+                <SocialButton
+                  title={"facebook"}
+                  link={"Miriam_Libre.com"}
+                  key={1}
+                />
               </p>
             </div>
             <div className="max-w-xl lg:max-w-lg mx-auto lg:order-last sm:order-first">
@@ -429,7 +587,8 @@ export function Newsletter({ updateLogged, updatePerson }) {
             style={{
               clipPath:
                 "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
-            }}></div>
+            }}
+          ></div>
         </div>
       </div>
     </>
@@ -444,31 +603,17 @@ export function Login({ updateLogged, updatePerson }) {
     e.preventDefault();
 
     axios
-      // .post("http://localhost:3001/login", { roll, password })
       .post(ipNport + "login", { roll, password })
       .then((response) => {
-        const { token } = response.data;
+        response.data.person.password = password; //response.password was not coming from the server. it is added from frontend input for later edits.
+        console.log("Login response data: ", response.data);
 
-        // Store the JWT in local storage
-        localStorage.setItem("token", token);
+        updatePerson(response.data.person);
         updateLogged(1);
-        axios.get(
-          // `http://localhost:3001/?query=${encodeURIComponent(roll)}`
-          ipNport + `?query=${encodeURIComponent(roll)}`
-        ).then((response) => {
-          response.data[0].password = password;
-          updatePerson(response.data[0]);
-        })
-          .catch((error) => {
-            console.error("Error:", error);
-            alert('wrong password');
-          })
-        // Redirect the user to a protected route. You can use React Router for navigation
       })
       .catch((error) => {
         console.error(error);
         alert("wrong password or roll! Or a Hacker :O");
-        // Handle login error
       });
   };
   return (
@@ -488,7 +633,7 @@ export function Login({ updateLogged, updatePerson }) {
                 name="roll"
                 type="roll"
                 autoComplete="roll"
-                value={roll}
+                value={roll || ""}
                 onChange={(e) => setRoll(e.target.value)}
                 required
                 className="w-full min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
@@ -505,7 +650,7 @@ export function Login({ updateLogged, updatePerson }) {
                 name="password"
                 type="password"
                 autoComplete="password"
-                value={password}
+                value={password || ""}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
@@ -514,11 +659,21 @@ export function Login({ updateLogged, updatePerson }) {
             </div>
           </div>
 
-          <a href="#" className="text-xs text-purple-600 hover:underline">
-            Forget Password?
-          </a>
+          <div className="flex items-center mt-2 text-xs text-purple-600">
+            <a href="#" className="hover:underline mr-4">
+              Forget Password?
+            </a>
+            <p className="mr-4">|</p>
+            <div onClick={() => { updateLogged(2) }} className="hover:underline cursor-pointer">
+              Register Account
+            </div>
+          </div>
+
           <div className="mt-3">
-            <button type="submit" className="w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-purple-700 rounded-md hover:bg-purple-600 focus:outline-none focus:bg-purple-600">
+            <button
+              type="submit"
+              className="w-full px-4 py-2 tracking-wide text-white transition-colors duration-200 transform bg-purple-700 rounded-md hover:bg-purple-600 focus:outline-none focus:bg-purple-600"
+            >
               Login
             </button>
           </div>
@@ -529,29 +684,63 @@ export function Login({ updateLogged, updatePerson }) {
 }
 
 export function ProfileEdit({ gperson, updateLogged }) {
-
-  const [person, setPerson] = useState({});//...gperson
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setPerson((person) => ({
-      ...person,
-      [name]: value,
-    }));
+  const [pass, setPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [newPass2, setNewPass2] = useState("");
+  const [person, setPerson] = useState({}); //...gperson
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPerson((prev) => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
-    person.contacts = 'phone ' + person.phone + ', email ' + person.email + ', facebook ' + person.facebook + ', ' + person.socialmedia,
-      person.keywords = person.attributes + ', ' + person.state + ', ' + person.country + ', ' + person.roll //for updating card preview
-  }, [person]);
+    setPerson((prev) => {
+      // Build contacts string
+      const contacts = [
+        prev.phone ? `phone ${prev.phone}` : null,
+        prev.email ? `email ${prev.email}` : null,
+        prev.facebook ? `facebook ${prev.facebook}` : null,
+        prev.socialmedia || null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      // Build keywords string
+      const keywords = [
+        prev.attributes,
+        prev.state,
+        prev.country,
+        prev.roll,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return { ...prev, contacts, keywords };
+    });
+  }, [person.phone, person.email, person.facebook, person.socialmedia, person.attributes, person.state, person.country, person.roll]);
+
   useEffect(() => {
     if (gperson) {
       if (gperson.contacts) {
-        gperson.phone = gperson.contacts.split(", ")[0].split(" ")[1] ? gperson.contacts.split(", ")[0].split(" ")[1] : '';
-        gperson.email = gperson.contacts.split(", ")[1].split(" ")[1] ? gperson.contacts.split(", ")[1].split(" ")[1] : '';
-        gperson.facebook = gperson.contacts.split(", ")[2].split(" ")[1] ? gperson.contacts.split(", ")[2].split(" ")[1] : '';
-        gperson.socialmedia = gperson.contacts.split(",").slice(3).toString().slice(1) ? gperson.contacts.split(",").slice(3).toString().trim() : '';
-        gperson.image = gperson.image ? gperson.image : '/vercel.svg';
-        gperson.thumbnail = gperson.thumbnail ? gperson.thumbnail : '/Olumpic_eve.jpg'
+        gperson.phone = gperson.contacts.split(", ")[0].split(" ")[1]
+          ? gperson.contacts.split(", ")[0].split(" ")[1]
+          : "";
+        gperson.email = gperson.contacts.split(", ")[1].split(" ")[1]
+          ? gperson.contacts.split(", ")[1].split(" ")[1]
+          : "";
+        gperson.facebook = gperson.contacts.split(", ")[2].split(" ")[1]
+          ? gperson.contacts.split(", ")[2].split(" ")[1]
+          : "";
+        gperson.socialmedia = gperson.contacts
+          .split(",")
+          .slice(3)
+          .toString()
+          .slice(1)
+          ? gperson.contacts.split(",").slice(3).toString().trim()
+          : "";
+        gperson.image = gperson.image ? gperson.image : "/ruet.png";
+        gperson.thumbnail = gperson.thumbnail ? gperson.thumbnail : "/ruet.ico";
       }
       setPerson({ ...gperson });
     }
@@ -559,18 +748,25 @@ export function ProfileEdit({ gperson, updateLogged }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    person.contacts = "phone " + person.phone + ", email " + person.email + ", facebook " + person.facebook + ", " + person.socialmedia;
-    // console.log(person.contacts);
+    person.contacts =
+      "phone " +
+      person.phone +
+      ", email " +
+      person.email +
+      ", facebook " +
+      person.facebook +
+      ", " +
+      person.socialmedia;
+
     axios
-      // .post("http://localhost:3001/", person)
-      .post("http://192.168.68.100:3001/", person)
+      .post(ipNport + "editProfile", person)
       .then((response) => {
         console.log(response.data);
+        alert("Profile Updated Successfully.\n" + response.data.message);
         updateLogged(0);
       })
       .catch((error) => {
         console.error(error);
-        // Handle error
       });
   };
   const cancelButton = (e) => {
@@ -579,30 +775,41 @@ export function ProfileEdit({ gperson, updateLogged }) {
   const handleUploadPic = () => {
     var myWidget = window.cloudinary.createUploadWidget(
       {
-        cloudName: 'dknq7gnuo',
-        api_key: '864344218735264', uploadPreset: "ml_default",
+        cloudName: "dknq7gnuo",
+        api_key: "864344218735264",
+        uploadPreset: "ml_default",
         showAdvancedOptions: true,
-        cropping: true, multiple: false, defaultSource: "local",
+        cropping: true,
+        multiple: false,
+        defaultSource: "local",
         styles: {
           palette: {
-            window: "#10173a", sourceBg: "#20304b",
-            windowBorder: "#7171D0", tabIcon: "#79F7FF", inactiveTabIcon: "#8E9FBF",
-            menuIcons: "#CCE8FF", link: "#72F1FF", action: "#5333FF",
-            inProgress: "#00ffcc", complete: "#33ff00", error: "#cc3333",
-            textDark: "#000000", textLight: "#ffffff"
+            window: "#10173a",
+            sourceBg: "#20304b",
+            windowBorder: "#7171D0",
+            tabIcon: "#79F7FF",
+            inactiveTabIcon: "#8E9FBF",
+            menuIcons: "#CCE8FF",
+            link: "#72F1FF",
+            action: "#5333FF",
+            inProgress: "#00ffcc",
+            complete: "#33ff00",
+            error: "#cc3333",
+            textDark: "#000000",
+            textLight: "#ffffff",
           },
           fonts: {
-            default: null, "'IBM Plex Sans', sans-serif": {
+            default: null,
+            "'IBM Plex Sans', sans-serif": {
               url: "https://fonts.googleapis.com/css?family=IBM+Plex+Sans",
-              active: true
-            }
-          }
-        }
-
+              active: true,
+            },
+          },
+        },
       },
       (error, result) => {
-        if (!error && result && result.event === 'success') {
-          console.log('Done! Here is the image info: ', result.info);
+        if (!error && result && result.event === "success") {
+          console.log("Done! Here is the image info: ", result.info);
           person.thumbnail = result.info.thumbnail_url;
           person.image = result.info.secure_url;
           console.log(person);
@@ -611,471 +818,643 @@ export function ProfileEdit({ gperson, updateLogged }) {
     );
     myWidget.open();
   };
+  const changePass = (e) => {
+    e.preventDefault();
+    if (newPass !== newPass2) {
+      alert("New password and confirm password do not match.");
+      return;
+    }
+    let request = { roll: person.roll, password: pass, newPass: newPass };
+    axios
+      .post(ipNport + "cngpass", request)
+      .then((response) => {
+        console.log(response.data.changedRows + " record(s) updated");
+        if (response.data.changedRows === 0) {
+          alert("Wrong Password");
+        } else {
+          alert("Password Changed Successfully");
+          updateLogged(0);
+        }
+        // console.log("Password change submitted:", { pass, newPass });
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
 
   return (
     <>
       {/* snap-start */}
-      <form className="px-[18%] dark:text-white" onSubmit={handleSubmit}>
-        <div className="space-y-10">
-          <div className="border-b border-gray-900/10 pb-12 mb-3">
-            <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4">
-              Personal Information
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-blue-600">
-              The information will be publicly visible.
-            </p>
 
-            <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <div className="sm:col-span-3">
-                <label
-                  htmlFor="first-name"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Full Name
-                </label>
-                <div className="mt-2">
-                  <input
-                    onChange={handleInputChange}
-                    type="text"
-                    name="name"
-                    id="name"
-                    value={person["name"]}
-                    autoComplete="fullname"
-                    className="block w-full indent-3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-              <div className="sm:col-span-1">
-                Profile Pic
-                <Image
-                  src={person.image ? person.image : '/vercel.svg'}//image link here'/vercel.svg'
-                  alt="profile"
-                  className="relative m-auto w-[8vh] h-[8vh] overflow-hidden rounded-full"
-                  height={"80"}
-                  width={"80"}
-                /></div>
-
-              <div className="sm:col-span-1">
-                Update Profile Pic
-                <button id="upload_widget"
-                  type="button"
-                  className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
-                  onClick={handleUploadPic}>
-                  Upload files
-                </button>
-              </div>
-
-              <div className="sm:col-span-1"></div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="position"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Job Title
-                </label>
-                <div className="mt-2">
-                  <input
-                    id="position"
-                    name="position"
-                    type="text"
-                    autoComplete="position"
-                    value={person["position"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="company"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Job Organisation
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    id="company"
-                    name="company"
-                    autoComplete="Institution"
-                    value={person["company"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="col-span-full">
-                <label
-                  htmlFor="higherEd"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Higher Education
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="higherEd"
-                    id="higherEd"
-                    autoComplete="higherEd"
-                    value={person["higherEd"]}
-                    onChange={handleInputChange}
-                    placeholder="PhD in Cryptography from Caltech, MSc in CyberSecurity from MIT"
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-full">
-                <label
-                  htmlFor="about"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  About (anything and everything related to career)
-                </label>
-                <div className="mt-2">
-                  <textarea
-                    type="text"
-                    name="about"
-                    id="about"
-                    autoComplete="about"
-                    value={person["about"]}
-                    onChange={handleInputChange}
-                    placeholder="I died twice already. As a matter of fact, I'm dead."
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 sm:col-start-1">
-                <label
-                  htmlFor="city"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  City
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="city"
-                    id="city"
-                    autoComplete="address-level2"
-                    value={person["city"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="region"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  State / Province
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="state"
-                    id="state"
-                    autoComplete="address-level1"
-                    value={person["state"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="postal-code"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Country
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="country"
-                    id="country"
-                    autoComplete="country"
-                    value={person["country"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="col-span-full">
-                <label
-                  htmlFor="attributes"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Attributes That Suits You
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="attributes"
-                    id="attributes"
-                    autoComplete="attributes"
-                    value={person["attributes"]}
-                    onChange={handleInputChange}
-                    placeholder="Comma Separeted: Web Dev, MERN, CyberSecurity, Criminal, MIT, ICPC World finalist, PRAN-RFL, etc."
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 sm:col-start-1">
-                <label
-                  htmlFor="phone"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Phone
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="tel"
-                    name="phone"
-                    id="phone"
-                    autoComplete="phone"
-                    value={person["phone"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Email
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    autoComplete="email"
-                    value={person["email"]}
-                    onChange={handleInputChange}
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="facebook"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Facebook
-                </label>
-                <div className="mt-2">
-                  <input
-                    type="text"
-                    name="facebook"
-                    id="facebook"
-                    autoComplete="facebook"
-                    value={person["facebook"]}
-                    onChange={handleInputChange}
-                    placeholder="https://facebook.com/kholilur1903121"
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-full">
-                <label
-                  htmlFor="socialmedia"
-                  className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                  Other social media links (Sitename space absolute_URL_of_Your_Profile)
-                </label>
-                <div className="mt-2">
-                  <textarea
-                    type="text"
-                    name="socialmedia"
-                    id="socialmedia"
-                    autoComplete="socialmedia"
-                    value={person["socialmedia"]}
-                    onChange={handleInputChange}
-                    placeholder="Comma separeted: dribble https://dribble.com/eftekher420, whatsapp http://whatsapp.com/jijuJizz, twitter https://twitter.com/imMizan"
-                    className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  />
-                </div>
-              </div>
-            </div>
+      <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4 mx-auto justify-center">
+        Change Password
+      </h2>
+      <form
+        className="my-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 dark:text-white w-[64%] m-auto justify-center"
+        onSubmit={changePass}
+      >
+        <div className="sm:col-span-2 sm:col-start-1">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+          >
+            Password
+          </label>
+          <div className="mt-2">
+            <input
+              type="password"
+              name="password"
+              id="password"
+              autoComplete="password"
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            />
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-x-6">
+        <div className="sm:col-span-2">
+          <label
+            htmlFor="newPass"
+            className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+          >
+            New Password
+          </label>
+          <div className="mt-2">
+            <input
+              type="password"
+              name="newPassword"
+              id="newPassword"
+              autoComplete="newPassword"
+              value={newPass}
+              onChange={(e) => setNewPass(e.target.value)}
+              className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            />
+          </div>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label
+            htmlFor="region"
+            className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+          >
+            Confirm Password
+          </label>
+          <div className="mt-2">
+            <input
+              type="password"
+              name="newPassword2"
+              id="newPassword2"
+              autoComplete="newPassword"
+              value={newPass2}
+              onChange={(e) => setNewPass2(e.target.value)}
+              className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        >
+          Change Password
+        </button>
+      </form>
+
+      <div className="h-[1px] w-[65vw] dark:bg-slate-300 bg-violet-500 mx-auto"></div>
+
+      <form className="px-[18%] mb-6 dark:text-white" onSubmit={handleSubmit}>
+        <div className="border-b border-gray-900/10 pb-12 mb-3 space-y-5">
+          <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4">
+            Personal Information
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-blue-600">
+            The information will be publicly visible.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+
+            {/* Roll (disabled) */}
+            <FormInput
+              label="Roll"
+              name="roll"
+              value={person.roll}
+              onChange={() => { }}
+              type="text"
+              colspan={2}
+              required={false}
+            />
+
+            {/* Full Name */}
+            <FormInput
+              label="Full Name"
+              name="name"
+              value={person.name}
+              onChange={handleInputChange}
+              type="text"
+              colspan={3}
+              required
+            />
+
+            {/* Profile Picture */}
+            <div className="sm:col-span-1 text-center">
+              <p className="mb-2">Profile Pic</p>
+              <Image
+                src={person.image || "/ruet.png"}
+                alt="profile"
+                className="relative m-auto w-[8vh] h-[8vh] overflow-hidden rounded-full"
+                height={80}
+                width={80}
+              />
+              <button
+                id="upload_widget"
+                type="button"
+                onClick={handleUploadPic}
+                className="mt-2 rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500 focus:ring-2 focus:ring-indigo-600 px-3 py-1"
+              >
+                Upload files
+              </button>
+            </div>
+
+            {/* Job Title */}
+            <FormInput
+              label="Job Title"
+              name="position"
+              value={person.position}
+              onChange={handleInputChange}
+              colspan={2}
+            />
+
+            {/* Job Organisation */}
+            <FormInput
+              label="Job Organisation"
+              name="company"
+              value={person.company}
+              onChange={handleInputChange}
+              colspan={3}
+            />
+
+            {/* Higher Education */}
+            <FormInput
+              label="Higher Education"
+              name="higherEd"
+              value={person.higherEd}
+              onChange={handleInputChange}
+              colspan={'full'}
+              placeholder="PhD in Cryptography from Caltech, MSc in CyberSecurity from MIT"
+            />
+
+            {/* About */}
+            <FormTextarea
+              label="About (anything and everything related to career)"
+              name="about"
+              value={person.about}
+              onChange={handleInputChange}
+              placeholder="I died twice already. As a matter of fact, I'm dead."
+            />
+
+            {/* City */}
+            <FormInput
+              label="City"
+              name="city"
+              value={person.city}
+              onChange={handleInputChange}
+              colspan={2}
+            />
+
+            {/* State / Province */}
+            <FormInput
+              label="State / Province"
+              name="state"
+              value={person.state}
+              onChange={handleInputChange}
+              colspan={2}
+            />
+
+            {/* Country */}
+            <FormInput
+              label="Country"
+              name="country"
+              value={person.country}
+              onChange={handleInputChange}
+              colspan={2}
+            />
+
+            {/* Attributes */}
+            <FormInput
+              label="Attributes That Suits You"
+              name="attributes"
+              value={person.attributes}
+              onChange={handleInputChange}
+              colspan={'full'}
+              placeholder="Comma Separated: Web Dev, MERN, CyberSecurity, Criminal, MIT, ICPC World finalist, PRAN-RFL, etc."
+            />
+
+            {/* Contacts */}
+            <FormInput
+              label="Phone"
+              name="phone"
+              value={person.phone}
+              onChange={handleInputChange}
+              colspan={2}
+              type="tel"
+            />
+
+            <FormInput
+              label="Email"
+              name="email"
+              value={person.email}
+              onChange={handleInputChange}
+              colspan={2}
+              type="email"
+            />
+
+            <FormInput
+              label="Facebook"
+              name="facebook"
+              value={person.facebook}
+              onChange={handleInputChange}
+              colspan={2}
+              placeholder="https://facebook.com/username"
+            />
+
+            <FormTextarea
+              label="Other social media links (Sitename space absolute_URL_of_Your_Profile)"
+              name="socialmedia"
+              value={person.socialmedia}
+              onChange={handleInputChange}
+              placeholder="Comma separated: dribble https://dribble.com/eftekher420, twitter https://twitter.com/imMizan"
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="mt-4 flex items-center justify-center gap-x-6">
           <button
             onClick={cancelButton}
             type="button"
-            className="text-sm font-semibold leading-6 text-gray-900 dark:text-slate-200">
+            className="text-sm font-semibold leading-6 text-gray-900 dark:text-slate-200"
+          >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
             Save
           </button>
         </div>
-      </form >
+      </form>
 
-      <div className="flex flex-col lg:flex-row items-center justify-center">
-        <div className="px-[0%]">
-          <PersonCardNoSnap props={person} /></div>
-        <div className="px-[0%]">
-          <PersonDescNoSnap props={person} />
+
+      <div className="h-[1px] w-[65vw] dark:bg-slate-300 bg-violet-500 mx-auto"></div>
+
+      <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100 mt-4 mx-auto justify-center">
+        Appearance
+      </h2>
+      <div className="my-6 flex flex-col lg:flex-row items-center justify-center">
+        <div className="px-[0%] text-center min-w-[20vw] max-w-[34vw]">
+          <PersonCard props={person} snap={""} />
+        </div>
+        <div className="px-[0%] min-w-[20vw]">
+          <PersonDesc props={person} snap={""} />
         </div>
       </div>
     </>
   );
 }
 
-export function PersonDescNoSnap({ props }) {
-  // props.image='https://res.cloudinary.com/dknq7gnuo/image/upload/v1689331231/Naeem_bgRemoved_oa5q9t.png';
-  let sbuttons = [];
-  if (props.contacts) {
-    let pArr = props.contacts.split(",");
-    for (let i = 0; i < pArr.length; i++) {
-      pArr[i] = pArr[i].trim();
-      let scl = pArr[i].split(" ");
-      if (!scl[1]) {
-        continue;
-      }
-      if (scl[1].length > 0) {
-        sbuttons.push(<SocialButton title={scl[0]} link={scl[1]} key={i} />);
-      }
+export function RegisterProfile({ gperson, updateLogged }) {
+  const [newPass, setNewPass] = useState("");
+  const [newPass2, setNewPass2] = useState("");
+  const [person, setPerson] = useState({});
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPerson((prev) => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    setPerson((prev) => {
+      // Build contacts string
+      const contacts = [
+        prev.phone ? `phone ${prev.phone}` : null,
+        prev.email ? `email ${prev.email}` : null,
+        prev.facebook ? `facebook ${prev.facebook}` : null,
+        prev.socialmedia || null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      // Build keywords string
+      const keywords = [
+        prev.attributes,
+        prev.state,
+        prev.country,
+        prev.roll,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return { ...prev, contacts, keywords };
+    });
+  }, [person.phone, person.email, person.facebook, person.socialmedia, person.attributes, person.state, person.country, person.roll]);
+
+
+  // When gperson updates, sync into person state
+  useEffect(() => {
+    if (gperson) {
+      const parsedContacts = gperson.contacts
+        ? parseContacts(gperson.contacts)
+        : {};
+      setPerson({
+        ...gperson,
+        ...parsedContacts,
+        image: gperson.image || "/ruet.png",
+        thumbnail: gperson.thumbnail || "/ruet.ico",
+      });
     }
-  }
+  }, [gperson]);
+
+  // Handle form submit
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!person.roll || person.roll.length < 5) {
+      alert("Please provide a valid roll number.");
+      return;
+    }
+    if (newPass !== newPass2) {
+      alert("New password and confirm password do not match.");
+      return;
+    }
+
+    const payload = {
+      ...person,
+      password: newPass,
+      contacts: formatContacts(person),
+    };
+
+    axios
+      .post(ipNport + "registerProfile", payload)
+      .then((response) => {
+        if (response.data.userExists === 1) {
+          alert("Profile Creation Failed: " + response.data.message);
+          updateLogged(0);
+        } else {
+          alert("Profile Created Successfully");
+          console.log("Profile Created Successfully");
+          updateLogged(0);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+
+  // Cancel
+  const cancelButton = () => {
+    updateLogged(0);
+  };
+
+  // Upload profile picture
+  const handleUploadPic = () => {
+    const myWidget = window.cloudinary.createUploadWidget(
+      {
+        cloudName: "dknq7gnuo",
+        api_key: "864344218735264",
+        uploadPreset: "ml_default",
+        cropping: true,
+        multiple: false,
+      },
+      (error, result) => {
+        if (!error && result && result.event === "success") {
+          setPerson((prev) => ({
+            ...prev,
+            thumbnail: result.info.thumbnail_url,
+            image: result.info.secure_url,
+          }));
+        }
+      }
+    );
+    myWidget.open();
+  };
+
   return (
     <>
-      <div className="text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0  bg-pink-50 dark:text-black">
+      <form className="px-[24%] mb-6 dark:text-white" onSubmit={handleSubmit}>
+        <div className="border-b border-gray-900/10 pb-12 mb-3 space-y-5">
+          <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4">
+            Provide Alumni Information
+          </h2>
+          <p className="text-sm leading-6 text-blue-600">
+            The information will be publicly visible.
+          </p>
 
-        <div className="float-center pr-[1vw]">
-          <Image
-            src={props.image ? props.image : '/vercel.svg'}
-            alt="profile"
-            className="relative m-auto w-[18vh] h-[18vh] overflow-hidden rounded-full"
-            height={"180"}
-            width={"180"}
-            style={{ imageRendering: 'auto' }}
-          />
-        </div>
-        <br />
-        <button className="text-blue-600 text-lg">{props.name}</button>
-        <h4>{props.position}{props.company ? ', ' + props.company : ''}</h4>
-        <br />
-        <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
-        <p>{props.about}</p>
-        <br />
-        <h2 className="text-cyan-600 underline">Higher Education</h2>
-        <p>{props.higherEd}</p>
-        <br />
-        <h2 className="text-cyan-800 underline">Related Attributes</h2>
-        <p>{props.attributes}</p>
-        <br />
-        <h2 className="text-cyan-400 underline">Living In</h2>
-        <p>{props.city}{props.state ? ', ' + props.state : ''}{props.country ? ', ' + props.country : ''} </p>
-        <br />
-        <h2 className="text-cyan-400 underline">Contacts</h2>
-        <div className="bottom-0 mt-auto">{sbuttons}</div>
-      </div>
-    </>
-  )
-}
-
-export function PersonCardNoSnap({ props, upSrchTxt }) {
-  const [pop, setPop] = useState(0);
-  useEffect(() => { }, [pop]);
-  const openPop = (val) => {
-    setPop(val);
-  }
-
-  let kbuttons = [];
-  if (props.keywords) {
-    let objarr = props.keywords.split(",");
-    let rndm = Math.floor(Math.random() * 7) + 1;
-    for (let i = 0; i < objarr.length; i++) {
-      kbuttons.push(
-        <KeyButton title={objarr[i]} num={rndm++} upSrchTxt={upSrchTxt} key={i} />
-      );
-      rndm = rndm >= 8 ? 1 : rndm;
-    }
-  }
-
-  let sbuttons = [];
-  if (props.contacts) {
-    let pArr = props.contacts.split(",");
-    for (let i = 0; i < pArr.length; i++) {
-      pArr[i] = pArr[i].trim();
-      let scl = pArr[i].split(" ");
-      if (!scl[1]) {
-        continue;
-      }
-      if (scl[1].length > 0) {
-        sbuttons.push(<SocialButton title={scl[0]} link={scl[1]} key={i} />);
-      }
-    }
-  }
-
-  return (
-    <>
-      <div className="md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20">
-        <div
-          className="flex flex-wrap items-center p-3"
-          style={{ justifyContent: "space-between" }}>
-          <div className="text-left pl-[1vw]">
-            <button style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }} onClick={() => openPop(1)}>{props.name}
-            </button>
-            <p style={{ fontSize: "1.5vh" }}>
-              {props.position}{(props.company) ? ',' : ''} {props.company}
-            </p>
-          </div>
-          <div className="float-center pr-[1vw]">
-            <Image
-              src={props.image ? props.image : '/vercel.svg'}//image link here'/vercel.svg'
-              alt="profile"
-              className="relative m-auto w-[4vh] h-[4vh] overflow-hidden rounded-full"
-              height={"80"}
-              width={"80"}
+          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+            {/* Roll number */}
+            <FormInput
+              label="Roll"
+              name="roll"
+              type="text"
+              value={person.roll}
+              onChange={handleInputChange}
+              placeholder="1903179"
+              required
+              pattern="[0-9]{5,7}"
             />
-          </div>
-        </div>
 
-        <div style={{ fontSize: "x-small" }} className="pb-1.5 mt-1">
-          {kbuttons}
-        </div>
-        <div
-          style={{
-            backgroundColor: "#e5d5de",
-            width: "100%",
-            height: "1px",
-            marginBottom: "1.5px",
-          }}></div>
-        <div className="bottom-0 mt-auto">{sbuttons}</div>
-      </div>
-    </>
-  );
-}
+            {/* Full Name */}
+            <FormInput
+              label="Full Name"
+              name="name"
+              value={person.name}
+              onChange={handleInputChange}
+              placeholder="Moshiur Rahman"
+              required
+              colspan={3}
+            />
+
+            {/* Profile Pic */}
+            <div className="sm:col-span-1">
+              Profile Pic
+              <Image
+                src={person.image || "/ruet.png"}
+                alt="profile"
+                className="relative m-auto w-[8vh] h-[8vh] rounded-full"
+                height={80}
+                width={80}
+              />
+            </div>
 
 
-{/* <div className="m-auto text-center justify-center bottom-0 absolute w-[100vw]">
-          <i className="text-blue-200 m-auto text-center font-extralight text-xs">--1903179--</i>
-        </div> */}
-{/* <div className="mt-5 flex max-w-md gap-x-4">
-            <label htmlFor="email-address" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="email-address"
+            {/* Job & Company */}
+            <FormInput
+              label="Job Title"
+              name="position"
+              value={person.position}
+              onChange={handleInputChange}
+              placeholder="Sr. Software Engineer"
+            />
+            <FormInput
+              label="Organisation"
+              name="company"
+              value={person.company}
+              onChange={handleInputChange}
+              placeholder="Bangladesh Bekar LLC"
+              colspan={3}
+            />
+
+            {/* Update Pic */}
+            <div className="sm:col-span-1">
+              Update Profile Pic
+              <button
+                type="button"
+                className="cursor-pointer rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500"
+                onClick={handleUploadPic}
+              >
+                Upload
+              </button>
+            </div>
+
+            {/* Higher Education */}
+            <FormInput
+              label="Higher Education"
+              name="higherEd"
+              value={person.higherEd}
+              onChange={handleInputChange}
+              placeholder="PhD in Cryptography from Caltech..."
+              colspan={'full'}
+            />
+
+            {/* About */}
+            <FormTextarea
+              label="About (career related)"
+              name="about"
+              value={person.about}
+              onChange={handleInputChange}
+              placeholder="I died twice already. As a matter of fact, I'm dead."
+            />
+
+            {/* Location */}
+            <FormInput
+              label="City"
+              name="city"
+              value={person.city}
+              onChange={handleInputChange}
+              placeholder="Sandwip"
+            />
+            <FormInput
+              label="State / Province"
+              name="state"
+              value={person.state}
+              onChange={handleInputChange}
+              placeholder="Chattogram"
+            />
+            <FormInput
+              label="Country"
+              name="country"
+              value={person.country}
+              onChange={handleInputChange}
+              placeholder="Bangladesh"
+            />
+
+            {/* Attributes */}
+            <FormInput
+              label="Attributes"
+              name="attributes"
+              value={person.attributes}
+              onChange={handleInputChange}
+              placeholder="Web Dev, MERN, CyberSecurity..."
+              colspan={'full'}
+            />
+
+            {/* Contacts */}
+            <FormInput
+              label="Phone"
+              name="phone"
+              type="tel"
+              value={person.phone}
+              onChange={handleInputChange}
+            />
+            <FormInput
+              label="Email"
               name="email"
               type="email"
-              autoComplete="email"
+              value={person.email}
+              onChange={handleInputChange}
               required
-              className="min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
-              placeholder="Enter your email"
+              placeholder="miraz173r@gmail.com"
             />
-            <button
-              type="submit"
-              className="flex-none rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
-              Subscribe
-            </button>
-          </div> 
-      */}
+            <FormInput
+              label="Facebook"
+              name="facebook"
+              value={person.facebook}
+              onChange={handleInputChange}
+              placeholder="https://facebook.com/example"
+            />
+            <FormTextarea
+              label="Other Social Media"
+              name="socialmedia"
+              value={person.socialmedia}
+              onChange={handleInputChange}
+              placeholder="twitter https://twitter.com/xyz, dribble https://dribble.com/abc"
+            />
+
+            <div className="sm:col-span-1"></div>
+
+            {/* Passwords */}
+            <FormInput
+              label="New Password"
+              name="newPass"
+              type="password"
+              value={newPass}
+              onChange={(e) => setNewPass(e.target.value)}
+              required
+            />
+            <FormInput
+              label="Confirm Password"
+              name="newPass2"
+              type="password"
+              value={newPass2}
+              onChange={(e) => setNewPass2(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="mt-4 flex items-center justify-center gap-x-6">
+          <button
+            onClick={cancelButton}
+            type="button"
+            className="text-sm font-semibold leading-6 text-gray-900 dark:text-slate-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+
+      {/* Preview Section */}
+      <div className="h-[1px] w-[65vw] dark:bg-slate-300 bg-violet-500 mx-auto"></div>
+      <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100 mt-4 text-center">
+        Appearance
+      </h2>
+      <div className="my-6 flex flex-col lg:flex-row items-center justify-center">
+        <div className="px-[0%] text-center min-w-[20vw] max-w-[34vw]">
+          <PersonCard props={person} snap="" />
+        </div>
+        <div className="px-[0%] min-w-[20vw]">
+          <PersonDesc props={person} snap="" />
+        </div>
+      </div>
+    </>
+  );
+}
