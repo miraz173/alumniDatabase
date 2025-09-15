@@ -1,0 +1,292 @@
+import { config } from "dotenv";
+import jwt from "jsonwebtoken";
+import express from "express";
+import bcrypt from "bcrypt";
+import mysql from "mysql2";
+import cors from "cors";
+
+config();
+const ip = "localhost";
+const port = process.env.PORT || 3001;
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// --------------------- DATABASE --------------------- //
+const dbPool = mysql.createPool({
+  host: process.env.db_host,
+  user: process.env.db_user,
+  port: process.env.db_port,
+  password: process.env.db_pass,
+  database: process.env.db_db,
+});
+
+// --------------------- UTILS --------------------- //
+const getConnection = (pool) =>
+  new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+      if (err) reject(err);
+      else resolve(connection);
+    });
+  });
+
+const query = (connection, sql, params) =>
+  new Promise((resolve, reject) => {
+    connection.query(sql, params, (err, results) => {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  });
+
+// --------------------- JWT MIDDLEWARE --------------------- //
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: "Missing token" });
+
+  const token = authHeader.split(" ")[1]; // Bearer <token>
+  jwt.verify(token, process.env.db_jwt_secret, (err, user) => {
+    if (err) return res.status(403).json({ message: "Invalid or expired token" });
+    req.user = user;
+    next();
+  });
+};
+
+// --------------------- ROUTES --------------------- //
+
+// Test route / search
+app.get("/", async (req, res) => {
+  const queryText = (req.query.query && req.query.query.toString().trim().slice(1)) || "RUET";
+  const keywords = queryText.split(",").map((kw) => kw.trim());
+  const keywordList = keywords.map((kw) => `'${kw}'`).join(",");
+  const keywordList2 = keywords.map((kw) => `'%${kw}%'`).join(" or keywords.attribute like ");
+
+  const sqlExact = `
+    SELECT a.*, CONCAT_WS(', ', a.roll, higherEd, state, country, attributes) AS keywords
+    FROM alumni a
+    JOIN keywords ON keywords.roll = a.roll
+    WHERE keywords.attribute IN (${keywordList})
+    GROUP BY a.roll
+    HAVING COUNT(DISTINCT keywords.attribute) = ${keywords.length};`;
+
+  const sqlLike = `
+    SELECT a.*, CONCAT_WS(', ', a.roll, higherEd, state, country, attributes) AS keywords
+    FROM alumni a
+    JOIN keywords ON keywords.roll = a.roll
+    WHERE keywords.attribute LIKE ${keywordList2}
+    GROUP BY a.roll
+    HAVING COUNT(DISTINCT keywords.attribute) = ${keywords.length};`;
+
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+    const results = await query(connection, queryText[0] === "1" ? sqlExact : sqlLike);
+    res.json(results);
+  } catch (err) {
+    console.error("Search error:", err);
+    res.sendStatus(500);
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// --------------------- AUTH --------------------- //
+
+// Registration
+app.post("/register", async (req, res) => {
+  const {
+    roll,
+    password,
+    name,
+    thumbnail,
+    image,
+    position,
+    company,
+    higherEd,
+    city,
+    state,
+    country,
+    contacts,
+    about,
+    attributes,
+  } = req.body;
+
+  if (!roll || !password) return res.status(400).json({ message: "Roll and password are required." });
+
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+
+    const existing = await query(connection, "SELECT * FROM users WHERE roll = ?", [roll]);
+    if (existing.length > 0) return res.status(400).json({ message: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await query(connection, "INSERT INTO users (roll, password) VALUES (?, ?)", [roll, hashedPassword]);
+
+    await query(
+      connection,
+      `INSERT INTO alumni
+      (roll, name, thumbnail, image, position, company, higherEd, city, state, country, contacts, about, attributes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [roll, name, thumbnail || "/ruet.png", image || "/ruet.ico", position, company, higherEd, city, state, country, contacts, about, attributes]
+    );
+
+    // Handle keywords
+    const keywordsArr = [name, roll, position, company, higherEd, city, state, country, attributes]
+      .filter(v => v != null && v !== "") // remove null, undefined, empty string
+      .map(v => String(v).trim());
+
+
+    if (keywordsArr.length > 0) {
+      const placeholders = keywordsArr.map(() => "(?, ?)").join(", ");
+      const values = [];
+      keywordsArr.forEach((kw) => values.push(roll, kw));
+      await query(connection, `INSERT INTO keywords (roll, attribute) VALUES ${placeholders}`, values);
+    }
+
+    const profile = await query(connection, "SELECT * FROM cse3100.alumni WHERE roll = ?", [roll]);
+    const token = jwt.sign(profile[0], process.env.db_jwt_secret, { expiresIn: "1h" });
+    console.log("User registered:", profile[0]);
+    res.json({token});
+    // res.status(201).json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Login
+app.post("/login", async (req, res) => {
+  const { roll, password } = req.body;
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+    const users = await query(connection, "SELECT * FROM users WHERE roll = ?", [roll]);
+    if (users.length === 0) return res.status(401).json({ message: "Authentication failed" });
+
+    const match = await bcrypt.compare(password, users[0].password);
+    if (!match) return res.status(401).json({ message: "Authentication failed" });
+
+    const profile = await query(connection, "SELECT * FROM cse3100.alumni WHERE roll = ?", [roll]);
+    const token = jwt.sign(profile[0], process.env.db_jwt_secret, { expiresIn: "1h" });
+
+    res.json({token});
+  } catch (err) {
+    console.error("Login error:", err);
+    res.sendStatus(500);
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// --------------------- PROFILE EDIT --------------------- //
+app.post("/edit-profile", authenticateJWT, async (req, res) => {
+  const {
+    name,
+    thumbnail,
+    image,
+    position,
+    company,
+    higherEd,
+    city,
+    state,
+    country,
+    contacts,
+    about,
+    attributes,
+  } = req.body;
+
+  const roll = req.user.roll;
+
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+
+    await query(
+      connection,
+      `UPDATE alumni SET
+      name = ?, thumbnail = ?, image = ?, position = ?, company = ?, higherEd = ?, city = ?, state = ?, country = ?, contacts = ?, about = ?, attributes = ?
+      WHERE roll = ?`,
+      [name, thumbnail || "/ruet.png", image || "/ruet.ico", position, company, higherEd, city, state, country, contacts, about, attributes, roll]
+    );
+
+    const keywordsArr = [name, roll, position, company, higherEd, city, state, country, attributes]
+      .join(",")
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+    await query(connection, "DELETE FROM keywords WHERE roll = ?", [roll]);
+
+    if (keywordsArr.length > 0) {
+      const placeholders = keywordsArr.map(() => "(?, ?)").join(", ");
+      const values = [];
+      keywordsArr.forEach((kw) => values.push(roll, kw));
+      await query(connection, `INSERT INTO keywords (roll, attribute) VALUES ${placeholders}`, values);
+    }
+
+    res.json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Edit profile error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// --------------------- CHANGE PASSWORD --------------------- //
+app.post("/cngpass", authenticateJWT, async (req, res) => {
+  const { password, newPass } = req.body;
+  const roll = req.user.roll;
+
+  if (!password || !newPass) return res.status(400).json({ message: "Both current and new passwords are required." });
+
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+    const users = await query(connection, "SELECT * FROM users WHERE roll = ?", [roll]);
+    if (users.length === 0) return res.status(401).json({ message: "Authentication failed" });
+
+    const match = await bcrypt.compare(password, users[0].password);
+    if (!match) return res.status(401).json({ message: "Current password incorrect" });
+
+    const hashedNewPass = await bcrypt.hash(newPass, 10);
+    await query(connection, "UPDATE users SET password = ? WHERE roll = ?", [hashedNewPass, roll]);
+
+    res.json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// --------------------- KAHOOT --------------------- //
+app.get("/kahoot", async (req, res) => {
+  const sql = `
+    SELECT attribute, COUNT(*) AS attCount
+    FROM keywords
+    GROUP BY attribute
+    ORDER BY attCount DESC
+    LIMIT 7;`;
+
+  let connection;
+  try {
+    connection = await getConnection(dbPool);
+    const results = await query(connection, sql);
+    res.json(results);
+  } catch (err) {
+    console.error("Kahoot error:", err);
+    res.sendStatus(500);
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// --------------------- SERVER START --------------------- //
+app.listen(port, ip, () => {
+  console.log(`Server is running on http://${ip}:${port}`);
+});

@@ -1,7 +1,7 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
+// import { Inter } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'] })
+// const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata = {
   title: 'RUET Alumni Database',
@@ -14,7 +14,7 @@ export default function RootLayout({ children }) {
       <head>
         <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript" async></script>
       </head>
-      <body className={inter.className}>{children}</body>
+      <body>{children}</body>
     </html>
   )
 }

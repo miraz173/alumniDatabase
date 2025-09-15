@@ -1,95 +1,11 @@
 import axios from "axios";
 import Image from "next/image";
+import { jwtDecode } from "jwt-decode";
 import React, { useState, useEffect, useRef } from "react";
+import { kMaxLength } from "buffer";
 
 const ipNport = "http://localhost:3001/";
 // const ipNport = "https://alumniserver.up.railway.app/";
-
-// 🔹 Helper: Format contacts fields into a single string
-const formatContacts = (person) => {
-  return `phone ${person.phone || ""}, email ${person.email || ""}, facebook ${person.facebook || ""
-    }, ${person.socialmedia || ""}`;
-};
-
-// 🔹 Helper: Parse contacts string back into fields
-const parseContacts = (contacts = "") => {
-  const parts = contacts.split(", ");
-  return {
-    phone: parts[0]?.split(" ")[1] || "",
-    email: parts[1]?.split(" ")[1] || "",
-    facebook: parts[2]?.split(" ")[1] || "",
-    socialmedia: parts.slice(3).join(", ").trim() || "",
-  };
-};
-
-// 🔹 Reusable input component
-const FormInput = ({
-  label,
-  name,
-  type = "text",
-  value,
-  onChange,
-  placeholder = "",
-  required = false,
-  pattern,
-  colspan = 2,
-}) => (
-  <div className={`sm:col-span-${colspan}`}>
-    <label
-      htmlFor={name}
-      className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
-    >
-      {label} {required && <p className="inline text-red-500">*</p>}
-    </label>
-    <div className="mt-2">
-      <input
-        type={type}
-        name={name}
-        id={name}
-        autoComplete={name}
-        value={value || ""}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        pattern={pattern}
-        className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm
-          ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
-          focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-      />
-    </div>
-  </div>
-);
-
-// 🔹 Reusable textarea component
-const FormTextarea = ({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder = "",
-}) => (
-  <div className="col-span-full">
-    <label
-      htmlFor={name}
-      className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
-    >
-      {label}
-    </label>
-    <div className="mt-2">
-      <textarea
-        name={name}
-        id={name}
-        value={value || ""}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="block pl-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm
-          ring-1 ring-inset ring-gray-300 placeholder:text-gray-400
-          focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-      />
-    </div>
-  </div>
-);
-
 
 export function Horizontal() {
   return (
@@ -121,7 +37,7 @@ export function Background() {
   );
 }
 
-export function KeyButton({ title, count="", num, upSrchTxt }) {
+export function KeyButton({ title, num, upSrchTxt }) {
   let btnclrs = {
     1: "bg-red-50 text-red-700 ring-red-600/10",
     2: "bg-gray-50 text-gray-600 ring-gray-500/10",
@@ -143,7 +59,7 @@ export function KeyButton({ title, count="", num, upSrchTxt }) {
         onClick={handleClick}
         className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]}`}
       >
-        {title} {count!=="" &&<span className="ml-1 text-xs">({count})</span>}
+        {title}
       </button>
     );
   }
@@ -226,7 +142,7 @@ export function SocialButton(props) {
   }
 }
 
-export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
+export function PersonCard({ props, upSrchTxt }) {
   const [pop, setPop] = useState(0);
   useEffect(() => { }, [pop]);
   const openPop = (val) => {
@@ -273,7 +189,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
       {/*self-start makes the card's height remain independent of other card height in the same row of grid*/}
       {/*flex flex-col  */}
       {pop === 0 && (
-        <div className={`${snap} md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
+        <div className="snap-start md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20">
           <div
             className="flex flex-wrap items-center p-3"
             style={{ justifyContent: "space-between" }}
@@ -304,19 +220,15 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
           <div style={{ fontSize: "x-small" }} className="pb-1.5 mt-1">
             {kbuttons}
           </div>
-          {sbuttons.length > 0 && (
-            <>
-              <div
-                style={{
-                  backgroundColor: "#e5d5de",
-                  width: "100%",
-                  height: "1px",
-                  marginBottom: "1.5px",
-                }}
-              ></div>
-              <div className="bottom-0 mt-auto">{sbuttons}</div>
-            </>
-          )}
+          <div
+            style={{
+              backgroundColor: "#e5d5de",
+              width: "100%",
+              height: "1px",
+              marginBottom: "1.5px",
+            }}
+          ></div>
+          <div className="bottom-0 mt-auto">{sbuttons}</div>
         </div>
       )}
       {pop === 1 && <PersonDesc props={props} openPop={openPop} />}
@@ -324,7 +236,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
   );
 }
 
-export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
+export function PersonDesc({ props, openPop }) {
   let sbuttons = [];
   if (props.contacts) {
     let pArr = props.contacts.split(",");
@@ -344,7 +256,7 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
   }
   return (
     <>
-      <div className={`${snap} text-sm text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0 bg-pink-50 dark:text-black`}>
+      <div className="snap-start text-sm text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0  bg-pink-50 dark:text-black">
         <div className="float-center pr-[1vw]">
           <Image
             src={props.image ? props.image : "/ruet.png"}
@@ -354,21 +266,20 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
             width={"120"}
           />
         </div>
-        {props.name && (
-          <button onClick={() => openPop(0)} className="text-blue-600 text-lg">
-            {props.name}
-          </button>
-        )}
-        {(props.position || props.company) && (
-          <h4>
-            {props.position}
-            {props.company ? ", " + props.company : ""}
-          </h4>
-        )}
+        <br />
+        <button onClick={() => openPop(0)} className="text-blue-600 text-lg">
+          {props.name}
+        </button>
+        <h4>
+          {props.position}
+          {props.company ? ", " + props.company : ""}
+        </h4>
+        <br />
         {props.about && (
           <>
             <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
             <p>{props.about}</p>
+            <br />
           </>
         )}
         {props.higherEd && (
@@ -378,12 +289,9 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
             <br />
           </>
         )}
-        {props.attributes && (
-          <>
-            <h2 className="text-cyan-400 underline">Related Attributes</h2>
-            <p>{props.attributes}</p>
-          </>
-        )}
+        <h2 className="text-cyan-400 underline">Related Attributes</h2>
+        <p>{props.attributes}</p>
+        <br />
         {(props.city || props.state || props.country) && (
           <>
             <h2 className="text-cyan-400 underline">Living In</h2>
@@ -437,12 +345,11 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
 
   useEffect(() => {
     axios
-      .get(ipNport + `topKeywords`)
+      .get(ipNport + `kahoot`)
       .then((response) => {
         const buttons = response.data.map((data, index) => (
           <KeyButton
             title={data.attribute}
-            count={data.attCount}
             num={(index % 7) + 1}
             upSrchTxt={upSrchTxt}
             key={index}
@@ -455,10 +362,27 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
       });
   }, [upSrchTxt]);
 
+  // const handleSearch = async (event) => {
+  //   event.preventDefault();
+  //   try {
+  //     const response = await axios.get(
+  //       // `http://localhost:3001/?query=${encodeURIComponent(query)}`
+  //       ipNport + `?query=${encodeURIComponent('1'+query)}`
+  //     );
+  //     if (response.data.length == 0) {
+  //       alert("No data found related to the term/terms :(");
+  //     }
+  //     else {updatePInfo(response.data);//setResults(response.data);
+  //     // console.log(ipNport + `?query=${encodeURIComponent(query)}`);
+  //   }
+  //   } catch (error) {
+  //     console.error("Error:", error);
+  //   }
+  // };
   const similarSearch = async (event, x) => {
     event.preventDefault();
     try {
-      const url = `${ipNport}search?query=${encodeURIComponent(x + query)}`;
+      const url = `${ipNport}?query=${encodeURIComponent(x + query)}`;
       const response = await axios.get(url);
       if (response.data.length === 0) {
         alert("No data found related to the term/terms :(");
@@ -552,7 +476,7 @@ export function SearchSection({ updatePInfo, upSrchTxt, query, setQuery }) {
   );
 }
 
-export function FooterSection({ updateLogged, updatePerson }) {
+export function Newsletter({ updateLogged, updatePerson }) {
   return (
     <>
       <Horizontal />
@@ -614,15 +538,22 @@ export function Login({ updateLogged, updatePerson }) {
     axios
       .post(ipNport + "login", { roll, password })
       .then((response) => {
-        response.data.person.password = password; //response.password was not coming from the server. it is added from frontend input for later edits.
-        console.log("Login response data: ", response.data);
+        const { token } = response.data;
 
-        updatePerson(response.data.person);
-        updateLogged(1);
+        // Store the JWT in local storage
+        localStorage.setItem("token", token);
+
+        console.log("Success:", response.data);
+        const decoded = jwtDecode(String(token));
+        console.log("Decoded JWT:", decoded);
+
+        updatePerson(decoded);
+        updateLogged(1); // Redirect the user to a protected route. can use React Router for navigation
       })
       .catch((error) => {
         console.error(error);
         alert("wrong password or roll! Or a Hacker :O");
+        // Handle login error
       });
   };
   return (
@@ -642,7 +573,7 @@ export function Login({ updateLogged, updatePerson }) {
                 name="roll"
                 type="roll"
                 autoComplete="roll"
-                value={roll || ""}
+                value={roll}
                 onChange={(e) => setRoll(e.target.value)}
                 required
                 className="w-full min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
@@ -659,7 +590,7 @@ export function Login({ updateLogged, updatePerson }) {
                 name="password"
                 type="password"
                 autoComplete="password"
-                value={password || ""}
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
@@ -668,14 +599,12 @@ export function Login({ updateLogged, updatePerson }) {
             </div>
           </div>
 
-          <div className="flex items-center mt-2 text-xs text-purple-600">
-            <a href="#" className="hover:underline mr-4">
-              Forget Password?
-            </a>
-            <p className="mr-4">|</p>
-            <div onClick={() => { updateLogged(2) }} className="hover:underline cursor-pointer">
-              Register Account
-            </div>
+          {/* <a href="#" className="text-xs text-purple-600 hover:underline">
+            Forget Password?
+          </a> */}
+
+          <div onClick={() => updateLogged(2)} className="text-xs text-purple-600 hover:underline">
+            Register New Account
           </div>
 
           <div className="mt-3">
@@ -697,46 +626,33 @@ export function ProfileEdit({ gperson, updateLogged }) {
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
   const [person, setPerson] = useState({}); //...gperson
-  // const handleInputChange = (event) => {
-  //   const { name, value } = event.target;
-  //   setPerson((person) => ({
-  //     ...person,
-  //     [name]: value,
-  //   }));
-  // };
-
-  // Handle input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setPerson((prev) => ({ ...prev, [name]: value }));
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setPerson((person) => ({
+      ...person,
+      [name]: value,
+    }));
   };
 
   useEffect(() => {
-    setPerson((prev) => {
-      // Build contacts string
-      const contacts = [
-        prev.phone ? `phone ${prev.phone}` : null,
-        prev.email ? `email ${prev.email}` : null,
-        prev.facebook ? `facebook ${prev.facebook}` : null,
-        prev.socialmedia || null,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      // Build keywords string
-      const keywords = [
-        prev.attributes,
-        prev.state,
-        prev.country,
-        prev.roll,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      return { ...prev, contacts, keywords };
-    });
-  }, [person.phone, person.email, person.facebook, person.socialmedia, person.attributes, person.state, person.country, person.roll]);
-
+    (person.contacts =
+      "phone " +
+      person.phone +
+      ", email " +
+      person.email +
+      ", facebook " +
+      person.facebook +
+      ", " +
+      person.socialmedia),
+      (person.keywords =
+        person.attributes +
+        ", " +
+        person.state +
+        ", " +
+        person.country +
+        ", " +
+        person.roll); //for updating card preview
+  }, [person]);
   useEffect(() => {
     if (gperson) {
       if (gperson.contacts) {
@@ -774,16 +690,18 @@ export function ProfileEdit({ gperson, updateLogged }) {
       person.facebook +
       ", " +
       person.socialmedia;
+    // console.log(person.contacts);
 
+    const token = localStorage.getItem("token");
     axios
-      .post(ipNport + "editProfile", person)
+      .post(ipNport + "edit-profile", token)
       .then((response) => {
         console.log(response.data);
-        alert("Profile Updated Successfully.\n" + response.data.message);
         updateLogged(0);
       })
       .catch((error) => {
         console.error(error);
+        // Handle error
       });
   };
   const cancelButton = (e) => {
@@ -837,11 +755,11 @@ export function ProfileEdit({ gperson, updateLogged }) {
   };
   const changePass = (e) => {
     e.preventDefault();
-    // Add your form submission logic here
     if (newPass !== newPass2) {
       alert("New password and confirm password do not match.");
       return;
     }
+    // Continue with password change logic
     let request = { roll: person.roll, password: pass, newPass: newPass };
     axios
       .post(ipNport + "cngpass", request)
@@ -857,6 +775,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
       })
       .catch((error) => {
         console.error(error);
+        // Handle error
       });
   };
 
@@ -951,162 +870,298 @@ export function ProfileEdit({ gperson, updateLogged }) {
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-
-            {/* Roll (disabled) */}
-            <FormInput
-              label="Roll"
-              name="roll"
-              value={person.roll}
-              onChange={() => { }}
-              type="text"
-              colspan={2}
-              required={false}
-            />
-
-            {/* Full Name */}
-            <FormInput
-              label="Full Name"
-              name="name"
-              value={person.name}
-              onChange={handleInputChange}
-              type="text"
-              colspan={3}
-              required
-            />
-
-            {/* Profile Picture */}
-            <div className="sm:col-span-1 text-center">
-              <p className="mb-2">Profile Pic</p>
+            <div className="sm:col-span-3">
+              <label
+                htmlFor="first-name"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Full Name
+              </label>
+              <div className="mt-2">
+                <input
+                  onChange={handleInputChange}
+                  type="text"
+                  name="name"
+                  id="name"
+                  value={person["name"]}
+                  autoComplete="fullname"
+                  className="block w-full indent-3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+            <div className="sm:col-span-1">
+              Profile Pic
               <Image
-                src={person.image || "/ruet.png"}
+                src={person.image ? person.image : "/ruet.png"} //image link here'/vercel.svg'
                 alt="profile"
                 className="relative m-auto w-[8vh] h-[8vh] overflow-hidden rounded-full"
-                height={80}
-                width={80}
+                height={"80"}
+                width={"80"}
               />
+            </div>
+
+            <div className="sm:col-span-1">
+              Update Profile Pic
               <button
                 id="upload_widget"
                 type="button"
+                className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500"
                 onClick={handleUploadPic}
-                className="mt-2 rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500 focus:ring-2 focus:ring-indigo-600 px-3 py-1"
               >
                 Upload files
               </button>
             </div>
 
-            {/* Job Title */}
-            <FormInput
-              label="Job Title"
-              name="position"
-              value={person.position}
-              onChange={handleInputChange}
-              colspan={2}
-            />
+            <div className="sm:col-span-1"></div>
 
-            {/* Job Organisation */}
-            <FormInput
-              label="Job Organisation"
-              name="company"
-              value={person.company}
-              onChange={handleInputChange}
-              colspan={3}
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="position"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Job Title
+              </label>
+              <div className="mt-2">
+                <input
+                  id="position"
+                  name="position"
+                  type="text"
+                  autoComplete="position"
+                  value={person["position"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* Higher Education */}
-            <FormInput
-              label="Higher Education"
-              name="higherEd"
-              value={person.higherEd}
-              onChange={handleInputChange}
-              colspan={'full'}
-              placeholder="PhD in Cryptography from Caltech, MSc in CyberSecurity from MIT"
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="company"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Job Organisation
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  id="company"
+                  name="company"
+                  autoComplete="Institution"
+                  value={person["company"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* About */}
-            <FormTextarea
-              label="About (anything and everything related to career)"
-              name="about"
-              value={person.about}
-              onChange={handleInputChange}
-              placeholder="I died twice already. As a matter of fact, I'm dead."
-            />
+            <div className="col-span-full">
+              <label
+                htmlFor="higherEd"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Higher Education
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="higherEd"
+                  id="higherEd"
+                  autoComplete="higherEd"
+                  value={person["higherEd"]}
+                  onChange={handleInputChange}
+                  placeholder="PhD in Cryptography from Caltech, MSc in CyberSecurity from MIT"
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* City */}
-            <FormInput
-              label="City"
-              name="city"
-              value={person.city}
-              onChange={handleInputChange}
-              colspan={2}
-            />
+            <div className="sm:col-span-full">
+              <label
+                htmlFor="about"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                About (anything and everything related to career)
+              </label>
+              <div className="mt-2">
+                <textarea
+                  type="text"
+                  name="about"
+                  id="about"
+                  autoComplete="about"
+                  value={person["about"]}
+                  onChange={handleInputChange}
+                  placeholder="I died twice already. As a matter of fact, I'm dead."
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* State / Province */}
-            <FormInput
-              label="State / Province"
-              name="state"
-              value={person.state}
-              onChange={handleInputChange}
-              colspan={2}
-            />
+            <div className="sm:col-span-2 sm:col-start-1">
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                City
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="city"
+                  id="city"
+                  autoComplete="address-level2"
+                  value={person["city"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* Country */}
-            <FormInput
-              label="Country"
-              name="country"
-              value={person.country}
-              onChange={handleInputChange}
-              colspan={2}
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="region"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                State / Province
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="state"
+                  id="state"
+                  autoComplete="address-level1"
+                  value={person["state"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* Attributes */}
-            <FormInput
-              label="Attributes That Suits You"
-              name="attributes"
-              value={person.attributes}
-              onChange={handleInputChange}
-              colspan={'full'}
-              placeholder="Comma Separated: Web Dev, MERN, CyberSecurity, Criminal, MIT, ICPC World finalist, PRAN-RFL, etc."
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="postal-code"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Country
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="country"
+                  id="country"
+                  autoComplete="country"
+                  value={person["country"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            {/* Contacts */}
-            <FormInput
-              label="Phone"
-              name="phone"
-              value={person.phone}
-              onChange={handleInputChange}
-              colspan={2}
-              type="tel"
-            />
+            <div className="col-span-full">
+              <label
+                htmlFor="attributes"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Attributes That Suits You
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="attributes"
+                  id="attributes"
+                  autoComplete="attributes"
+                  value={person["attributes"]}
+                  onChange={handleInputChange}
+                  placeholder="Comma Separeted: Web Dev, MERN, CyberSecurity, Criminal, MIT, ICPC World finalist, PRAN-RFL, etc."
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            <FormInput
-              label="Email"
-              name="email"
-              value={person.email}
-              onChange={handleInputChange}
-              colspan={2}
-              type="email"
-            />
+            <div className="sm:col-span-2 sm:col-start-1">
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Phone
+              </label>
+              <div className="mt-2">
+                <input
+                  type="tel"
+                  name="phone"
+                  id="phone"
+                  autoComplete="phone"
+                  value={person["phone"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            <FormInput
-              label="Facebook"
-              name="facebook"
-              value={person.facebook}
-              onChange={handleInputChange}
-              colspan={2}
-              placeholder="https://facebook.com/username"
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Email
+              </label>
+              <div className="mt-2">
+                <input
+                  type="email"
+                  name="email"
+                  id="email"
+                  autoComplete="email"
+                  value={person["email"]}
+                  onChange={handleInputChange}
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
 
-            <FormTextarea
-              label="Other social media links (Sitename space absolute_URL_of_Your_Profile)"
-              name="socialmedia"
-              value={person.socialmedia}
-              onChange={handleInputChange}
-              placeholder="Comma separated: dribble https://dribble.com/eftekher420, twitter https://twitter.com/imMizan"
-            />
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="facebook"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Facebook
+              </label>
+              <div className="mt-2">
+                <input
+                  type="text"
+                  name="facebook"
+                  id="facebook"
+                  autoComplete="facebook"
+                  value={person["facebook"]}
+                  onChange={handleInputChange}
+                  placeholder="https://facebook.com/kholilur1903121"
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-full">
+              <label
+                htmlFor="socialmedia"
+                className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200"
+              >
+                Other social media links (Sitename space
+                absolute_URL_of_Your_Profile)
+              </label>
+              <div className="mt-2">
+                <textarea
+                  type="text"
+                  name="socialmedia"
+                  id="socialmedia"
+                  autoComplete="socialmedia"
+                  value={person["socialmedia"] ? person["socialmedia"] : ""}
+                  onChange={handleInputChange}
+                  placeholder="Comma separeted: dribble https://dribble.com/eftekher420, whatsapp http://whatsapp.com/jijuJizz, twitter https://twitter.com/imMizan"
+                  className="block indent-2 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="mt-4 flex items-center justify-center gap-x-6">
           <button
             onClick={cancelButton}
@@ -1124,7 +1179,6 @@ export function ProfileEdit({ gperson, updateLogged }) {
         </div>
       </form>
 
-
       <div className="h-[1px] w-[65vw] dark:bg-slate-300 bg-violet-500 mx-auto"></div>
 
       <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100 mt-4 mx-auto justify-center">
@@ -1132,347 +1186,357 @@ export function ProfileEdit({ gperson, updateLogged }) {
       </h2>
       <div className="my-6 flex flex-col lg:flex-row items-center justify-center">
         <div className="px-[0%] text-center min-w-[20vw] max-w-[34vw]">
-          <PersonCard props={person} snap={""} />
+          <PersonCardNoSnap props={person} />
         </div>
         <div className="px-[0%] min-w-[20vw]">
-          <PersonDesc props={person} snap={""} />
+          <PersonDescNoSnap props={person} />
         </div>
       </div>
     </>
   );
 }
 
-export function RegisterProfile({ gperson, updateLogged }) {
-  const [newPass, setNewPass] = useState("");
-  const [newPass2, setNewPass2] = useState("");
-  const [person, setPerson] = useState({});
-
-  // Handle input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setPerson((prev) => ({ ...prev, [name]: value }));
-  };
-
-  useEffect(() => {
-    setPerson((prev) => {
-      // Build contacts string
-      const contacts = [
-        prev.phone ? `phone ${prev.phone}` : null,
-        prev.email ? `email ${prev.email}` : null,
-        prev.facebook ? `facebook ${prev.facebook}` : null,
-        prev.socialmedia || null,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      // Build keywords string
-      const keywords = [
-        prev.attributes,
-        prev.state,
-        prev.country,
-        prev.roll,
-      ]
-        .filter(Boolean)
-        .join(", ");
-
-      return { ...prev, contacts, keywords };
-    });
-  }, [person.phone, person.email, person.facebook, person.socialmedia, person.attributes, person.state, person.country, person.roll]);
-
-
-  // When gperson updates, sync into person state
-  useEffect(() => {
-    if (gperson) {
-      const parsedContacts = gperson.contacts
-        ? parseContacts(gperson.contacts)
-        : {};
-      setPerson({
-        ...gperson,
-        ...parsedContacts,
-        image: gperson.image || "/ruet.png",
-        thumbnail: gperson.thumbnail || "/ruet.ico",
-      });
-    }
-  }, [gperson]);
-
-  // Handle form submit
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!person.roll || person.roll.length < 5) {
-      alert("Please provide a valid roll number.");
-      return;
-    }
-    if (newPass !== newPass2) {
-      alert("New password and confirm password do not match.");
-      return;
-    }
-
-    const payload = {
-      ...person,
-      password: newPass,
-      contacts: formatContacts(person),
-    };
-
-    axios
-      .post(ipNport + "registerProfile", payload)
-      .then((response) => {
-        if (response.data.userExists === 1) {
-          alert("Profile Creation Failed: " + response.data.message);
-          updateLogged(0);
-        } else {
-          alert("Profile Created Successfully");
-          console.log("Profile Created Successfully");
-          updateLogged(0);
-        }
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  };
-
-  // Cancel
-  const cancelButton = () => {
-    updateLogged(0);
-  };
-
-  // Upload profile picture
-  const handleUploadPic = () => {
-    const myWidget = window.cloudinary.createUploadWidget(
-      {
-        cloudName: "dknq7gnuo",
-        api_key: "864344218735264",
-        uploadPreset: "ml_default",
-        cropping: true,
-        multiple: false,
-      },
-      (error, result) => {
-        if (!error && result && result.event === "success") {
-          setPerson((prev) => ({
-            ...prev,
-            thumbnail: result.info.thumbnail_url,
-            image: result.info.secure_url,
-          }));
-        }
+export function PersonDescNoSnap({ props }) {
+  // props.image='https://res.cloudinary.com/dknq7gnuo/image/upload/v1689331231/Naeem_bgRemoved_oa5q9t.png';
+  let sbuttons = [];
+  if (props.contacts) {
+    let pArr = props.contacts.split(",");
+    for (let i = 0; i < pArr.length; i++) {
+      pArr[i] = pArr[i].trim();
+      let scl = pArr[i].split(" ");
+      if (!scl[1]) {
+        continue;
       }
-    );
-    myWidget.open();
+      if (scl[1].length > 0) {
+        sbuttons.push(<SocialButton title={scl[0]} link={scl[1]} key={i} />);
+      }
+    }
+    // console.log(props);
+  }
+  return (
+    <>
+      <div className="text-center relative justify-center p-4 m-2 rounded-md border border-b-slate-800 dark:border-0  bg-pink-50 dark:text-black">
+        <div className="float-center pr-[1vw]">
+          <Image
+            src={props.image ? props.image : "/ruet.png"}
+            alt="profile"
+            className="relative m-auto w-[18vh] h-[18vh] overflow-hidden rounded-full"
+            height={"180"}
+            width={"180"}
+            style={{ imageRendering: "auto" }}
+          />
+        </div>
+        <br />
+        <button className="text-blue-600 text-lg">{props.name}</button>
+        <h4>
+          {props.position}
+          {props.company ? ", " + props.company : ""}
+        </h4>
+        <br />
+        <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
+        <p>{props.about}</p>
+        <br />
+        {props.higherEd && (
+          <>
+            <h2 className="text-cyan-600 underline">Higher Education</h2>
+            <p>{props.higherEd}</p>
+          </>
+        )}
+        <br />
+
+        <h2 className="text-cyan-800 underline">Related Attributes</h2>
+        <p>{props.attributes}</p>
+        <br />
+        <h2 className="text-cyan-400 underline">Living In</h2>
+        <p>
+          {props.city}
+          {props.state ? ", " + props.state : ""}
+          {props.country ? ", " + props.country : ""}{" "}
+        </p>
+        <br />
+        <h2 className="text-cyan-400 underline">Contacts</h2>
+        <div className="bottom-0 mt-auto">{sbuttons}</div>
+      </div>
+    </>
+  );
+}
+
+export function PersonCardNoSnap({ props, upSrchTxt }) {
+  const [pop, setPop] = useState(0);
+  useEffect(() => { }, [pop]);
+  const openPop = (val) => {
+    setPop(val);
   };
+
+  let kbuttons = [];
+  if (props.keywords) {
+    let objarr = props.keywords.split(",");
+    let rndm = Math.floor(Math.random() * 7) + 1;
+    for (let i = 0; i < objarr.length; i++) {
+      kbuttons.push(
+        <KeyButton
+          title={objarr[i]}
+          num={rndm++}
+          upSrchTxt={upSrchTxt}
+          key={i}
+        />
+      );
+      rndm = rndm >= 8 ? 1 : rndm;
+    }
+  }
+
+  let sbuttons = [];
+  if (props.contacts) {
+    let pArr = props.contacts.split(",");
+    for (let i = 0; i < pArr.length; i++) {
+      pArr[i] = pArr[i].trim();
+      let scl = pArr[i].split(" ");
+      if (!scl[1]) {
+        continue;
+      }
+      if (scl[1].length > 0) {
+        sbuttons.push(<SocialButton title={scl[0]} link={scl[1]} key={i} />);
+      }
+    }
+  }
 
   return (
     <>
-      <form className="px-[24%] mb-6 dark:text-white" onSubmit={handleSubmit}>
-        <div className="border-b border-gray-900/10 pb-12 mb-3 space-y-5">
-          <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4">
-            Provide Alumni Information
-          </h2>
-          <p className="text-sm leading-6 text-blue-600">
-            The information will be publicly visible.
-          </p>
-
-          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-            {/* Roll number */}
-            <FormInput
-              label="Roll"
-              name="roll"
-              type="text"
-              value={person.roll}
-              onChange={handleInputChange}
-              placeholder="1903179"
-              required
-              pattern="[0-9]{5,7}"
-            />
-
-            {/* Full Name */}
-            <FormInput
-              label="Full Name"
-              name="name"
-              value={person.name}
-              onChange={handleInputChange}
-              placeholder="Moshiur Rahman"
-              required
-              colspan={3}
-            />
-
-            {/* Profile Pic */}
-            <div className="sm:col-span-1">
-              Profile Pic
-              <Image
-                src={person.image || "/ruet.png"}
-                alt="profile"
-                className="relative m-auto w-[8vh] h-[8vh] rounded-full"
-                height={80}
-                width={80}
-              />
-            </div>
-
-
-            {/* Job & Company */}
-            <FormInput
-              label="Job Title"
-              name="position"
-              value={person.position}
-              onChange={handleInputChange}
-              placeholder="Sr. Software Engineer"
-            />
-            <FormInput
-              label="Organisation"
-              name="company"
-              value={person.company}
-              onChange={handleInputChange}
-              placeholder="Bangladesh Bekar LLC"
-              colspan={3}
-            />
-
-            {/* Update Pic */}
-            <div className="sm:col-span-1">
-              Update Profile Pic
-              <button
-                type="button"
-                className="cursor-pointer rounded-md bg-white font-semibold text-indigo-600 hover:text-indigo-500"
-                onClick={handleUploadPic}
-              >
-                Upload
-              </button>
-            </div>
-
-            {/* Higher Education */}
-            <FormInput
-              label="Higher Education"
-              name="higherEd"
-              value={person.higherEd}
-              onChange={handleInputChange}
-              placeholder="PhD in Cryptography from Caltech..."
-              colspan={'full'}
-            />
-
-            {/* About */}
-            <FormTextarea
-              label="About (career related)"
-              name="about"
-              value={person.about}
-              onChange={handleInputChange}
-              placeholder="I died twice already. As a matter of fact, I'm dead."
-            />
-
-            {/* Location */}
-            <FormInput
-              label="City"
-              name="city"
-              value={person.city}
-              onChange={handleInputChange}
-              placeholder="Sandwip"
-            />
-            <FormInput
-              label="State / Province"
-              name="state"
-              value={person.state}
-              onChange={handleInputChange}
-              placeholder="Chattogram"
-            />
-            <FormInput
-              label="Country"
-              name="country"
-              value={person.country}
-              onChange={handleInputChange}
-              placeholder="Bangladesh"
-            />
-
-            {/* Attributes */}
-            <FormInput
-              label="Attributes"
-              name="attributes"
-              value={person.attributes}
-              onChange={handleInputChange}
-              placeholder="Web Dev, MERN, CyberSecurity..."
-              colspan={'full'}
-            />
-
-            {/* Contacts */}
-            <FormInput
-              label="Phone"
-              name="phone"
-              type="tel"
-              value={person.phone}
-              onChange={handleInputChange}
-            />
-            <FormInput
-              label="Email"
-              name="email"
-              type="email"
-              value={person.email}
-              onChange={handleInputChange}
-              required
-              placeholder="miraz173r@gmail.com"
-            />
-            <FormInput
-              label="Facebook"
-              name="facebook"
-              value={person.facebook}
-              onChange={handleInputChange}
-              placeholder="https://facebook.com/example"
-            />
-            <FormTextarea
-              label="Other Social Media"
-              name="socialmedia"
-              value={person.socialmedia}
-              onChange={handleInputChange}
-              placeholder="twitter https://twitter.com/xyz, dribble https://dribble.com/abc"
-            />
-
-            <div className="sm:col-span-1"></div>
-
-            {/* Passwords */}
-            <FormInput
-              label="New Password"
-              name="newPass"
-              type="password"
-              value={newPass}
-              onChange={(e) => setNewPass(e.target.value)}
-              required
-            />
-            <FormInput
-              label="Confirm Password"
-              name="newPass2"
-              type="password"
-              value={newPass2}
-              onChange={(e) => setNewPass2(e.target.value)}
-              required
+      <div className="md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20">
+        <div
+          className="flex flex-wrap items-center p-3"
+          style={{ justifyContent: "space-between" }}
+        >
+          <div className="text-left pl-[1vw]">
+            <button
+              style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }}
+              onClick={() => openPop(1)}
+            >
+              {props.name}
+            </button>
+            <p style={{ fontSize: "1.5vh" }}>
+              {props.position}
+              {props.company ? "," : ""} {props.company}
+            </p>
+          </div>
+          <div className="float-center pr-[1vw]">
+            <Image
+              src={props.image ? props.image : "/ruet.png"} //image link here'/vercel.svg'
+              alt="profile"
+              className="relative m-auto w-[4vh] h-[4vh] overflow-hidden rounded-full"
+              height={"80"}
+              width={"80"}
             />
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="mt-4 flex items-center justify-center gap-x-6">
-          <button
-            onClick={cancelButton}
-            type="button"
-            className="text-sm font-semibold leading-6 text-gray-900 dark:text-slate-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-          >
-            Save
-          </button>
+        <div style={{ fontSize: "x-small" }} className="pb-1.5 mt-1">
+          {kbuttons}
         </div>
-      </form>
-
-      {/* Preview Section */}
-      <div className="h-[1px] w-[65vw] dark:bg-slate-300 bg-violet-500 mx-auto"></div>
-      <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-100 mt-4 text-center">
-        Appearance
-      </h2>
-      <div className="my-6 flex flex-col lg:flex-row items-center justify-center">
-        <div className="px-[0%] text-center min-w-[20vw] max-w-[34vw]">
-          <PersonCard props={person} snap="" />
-        </div>
-        <div className="px-[0%] min-w-[20vw]">
-          <PersonDesc props={person} snap="" />
-        </div>
+        <div
+          style={{
+            backgroundColor: "#e5d5de",
+            width: "100%",
+            height: "1px",
+            marginBottom: "1.5px",
+          }}
+        ></div>
+        <div className="bottom-0 mt-auto">{sbuttons}</div>
       </div>
     </>
+  );
+}
+
+export function RegistrationForm({ updateLogged, updatePerson }) {
+  const [person, setPerson] = useState({
+    role: "",
+    name: "",
+    roll: "",
+    email: "",
+    phone: "",
+    facebook: "",
+    socialmedia: "",
+    password: "",
+    confirmPassword: "",
+    image: "/ruet.png",
+    thumbnail: "/ruet.ico",
+  });
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setPerson((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (person.password !== person.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+
+    // create contacts + keywords string
+    person.contacts = `phone ${person.phone}, email ${person.email}, facebook ${person.facebook}, ${person.socialmedia}`;
+    person.keywords = `${person.role}, ${person.roll}, ${person.state}, ${person.country}`;
+
+    axios
+      .post(ipNport + "register", person)
+      .then((res) => {
+        alert("Registration Successful!");
+        updatePerson(person);
+        updateLogged(1); // move user to logged-in/dashboard state
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Error during registration.");
+      });
+  };
+
+  return (
+    <form
+      className="px-[18%] my-10"
+      onSubmit={handleSubmit}
+    >
+      <h2 className="text-xl font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4">
+        Alumni / Student Registration
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-blue-600">
+        Please fill in the details to create your account.
+      </p>
+
+      <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-4">
+        {/* Role */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">
+            Register As
+          </label>
+          <select
+            name="role"
+            value={person.role}
+            onChange={handleInputChange}
+            className="text-gray-800 w-full border-gray-300 rounded-md shadow-sm p-2 px-4"
+            required
+          >
+            <option value="">-- Select --</option>
+            <option value="student">Student</option>
+            <option value="alumni">Alumni</option>
+          </select>
+        </div>
+
+        {/* Name */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Full Name</label>
+          <input
+            type="text"
+            name="name"
+            value={person.name}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Roll */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Roll/ID</label>
+          <input
+            type="text"
+            name="roll"
+            placeholder="1903179"
+            value={person.roll}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Email */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={person.email}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Phone */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Phone</label>
+          <input
+            type="tel"
+            name="phone"
+            value={person.phone}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Facebook */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Facebook</label>
+          <input
+            type="text"
+            name="facebook"
+            value={person.facebook}
+            onChange={handleInputChange}
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Social Media */}
+        <div className="sm:col-span-full">
+          <label className="block text-sm font-medium leading-6">
+            Other Social Media
+          </label>
+          <textarea
+            name="socialmedia"
+            value={person.socialmedia}
+            onChange={handleInputChange}
+            placeholder="Comma separated: twitter https://twitter.com/xyz, linkedin https://linkedin.com/in/xyz"
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Password */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Password</label>
+          <input
+            type="password"
+            name="password"
+            value={person.password}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+
+        {/* Confirm Password */}
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6">Confirm Password</label>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={person.confirmPassword}
+            onChange={handleInputChange}
+            required
+            className="text-gray-800 block w-full indent-3 rounded-md border-0 py-1.5 shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-x-6">
+        <button
+          type="submit"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+        >
+          Register
+        </button>
+      </div>
+    </form>
   );
 }

@@ -1,9 +1,11 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {}
+/**
+ *  @type {import('next').NextConfig} 
+*/
+// const nextConfig = {}
 
 // module.exports = 
 module.exports = {
-    nextConfig,
+    // nextConfig,
     images: {
         remotePatterns: [
             {
