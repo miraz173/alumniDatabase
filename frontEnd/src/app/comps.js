@@ -827,7 +827,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
     }
     let request = { roll: person.roll, password: pass, newPass: newPass };
     axios
-      .post(ipNport + "cngpass", request)
+      .post(ipNport + "changePassword", request)
       .then((response) => {
         console.log(response.data.changedRows + " record(s) updated");
         if (response.data.changedRows === 0) {
@@ -1453,4 +1453,5 @@ export function RegisterProfile({ gperson, updateLogged }) {
     </>
   );
 }
+
 
