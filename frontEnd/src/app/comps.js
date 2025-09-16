@@ -60,7 +60,7 @@ const FormInput = ({
   </div>
 );
 
-// Reusable textarea component
+// 🔹 Reusable textarea component
 const FormTextarea = ({
   label,
   name,
@@ -129,7 +129,7 @@ export function KeyButton({ title, count = "", num, upSrchTxt }) {
     4: "bg-green-50 text-green-700 ring-green-600/20",
     5: "bg-blue-50 text-blue-700 ring-blue-700/10",
     6: "bg-indigo-50 text-indigo-700 ring-indigo-700/10",
-    7: " bg-purple-50 text-purple-700 ring-purple-700/10",
+    7: "bg-purple-50 text-purple-700 ring-purple-700/10",
   };
 
   const handleClick = () => {
@@ -141,7 +141,7 @@ export function KeyButton({ title, count = "", num, upSrchTxt }) {
     return (
       <button
         onClick={handleClick}
-        className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]}`}
+        className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]} hover:ring-2 hover:scale-105 transition-all duration-150 ease-in-out`}
       >
         {title} {count !== "" && <span className="ml-1 text-xs">({count})</span>}
       </button>
@@ -163,6 +163,7 @@ export function SocialButton(props) {
     linkedin: "text-blue-800",
     telegram: "text-[#61A8DE]",
     stackoverflow: "text-[#f58925]",
+    codeforces: "text-[#1f8acb]",
   };
 
   let path = {
@@ -190,7 +191,9 @@ export function SocialButton(props) {
       "m20.665 3.717-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z",
     stackoverflow:
       "M13.492 18.136v-5.272h1.665v7.022H.13v-7.022h1.665v5.272z M3.632 12.364l8.173 1.795.346-1.727-8.173-1.796-.346 1.728zm1.082-4.091l7.567 3.704.692-1.59-7.568-3.728-.691 1.614zm2.097-3.91l6.421 5.614 1.06-1.34L7.87 3.022l-1.06 1.34zM10.962.206L9.622 1.25l4.973 7.045 1.34-1.045L10.962.205zM3.46 16.364h8.346v-1.75H3.46v1.75z",
-  };
+    codeforces:
+      "M4.5 7.5C5.328 7.5 6 8.172 6 9v10.5c0 .828-.672 1.5-1.5 1.5h-3C.673 21 0 20.328 0 19.5V9c0-.828.673-1.5 1.5-1.5h3zm9-4.5c.828 0 1.5.672 1.5 1.5v15c0 .828-.672 1.5-1.5 1.5h-3c-.827 0-1.5-.672-1.5-1.5v-15c0-.828.673-1.5 1.5-1.5h3zm9 7.5c.828 0 1.5.672 1.5 1.5v7.5c0 .828-.672 1.5-1.5 1.5h-3c-.828 0-1.5-.672-1.5-1.5V12c0-.828.672-1.5 1.5-1.5h3z",
+    };
 
   let link =
     props.title == "phone"
@@ -209,8 +212,8 @@ export function SocialButton(props) {
           type="button"
           data-te-ripple-init
           data-te-ripple-color="light"
-          className={`cursor-alias mb-2 inline-block rounded px-3 py-2 text-xs ${color[props.title]
-            } font-medium uppercase leading-normal shadow-md transition duration-150 ease-in-out hover:shadow-lg focus:shadow-lg focus:outline-none focus:ring-0 active:shadow-lg`}
+          className={`cursor-alias mb-2 mx-1 inline-block rounded px-3 py-2 text-xs ${color[props.title]
+            } font-medium uppercase leading-normal shadow-lg hover:ring-1 hover:scale-105 transition-all duration-150 ease-in-out hover:shadow-xl`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -273,14 +276,15 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
       {/*self-start makes the card's height remain independent of other card height in the same row of grid*/}
       {/*flex flex-col  */}
       {pop === 0 && (
-        <div className={`${snap} md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
+        <div className={`${snap} flex flex-col md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
           <div
             className="flex flex-wrap items-center p-3"
             style={{ justifyContent: "space-between" }}
           >
             <div className="text-left pl-[1vw]">
               <button
-                style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }}
+                // style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }}
+                className="font-bold hover:underline text-blue-600"
                 onClick={() => openPop(1)}
               >
                 {props.name}
@@ -301,11 +305,12 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
             </div>
           </div>
 
-          <div style={{ fontSize: "x-small" }} className="pb-1.5 mt-1">
+          <div className="pb-1.5 mt-1 font-xs flex-1">
             {kbuttons}
           </div>
+
           {sbuttons.length > 0 && (
-            <>
+            <div className=" ">
               <div
                 style={{
                   backgroundColor: "#e5d5de",
@@ -315,7 +320,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
                 }}
               ></div>
               <div className="bottom-0 mt-auto">{sbuttons}</div>
-            </>
+            </div>
           )}
         </div>
       )}
@@ -355,49 +360,47 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
           />
         </div>
         {props.name && (
-          <button onClick={() => openPop(0)} className="text-blue-600 text-lg">
+          <button onClick={() => openPop(0)} className="text-blue-600 text-lg font-bold hover:underline">
             {props.name}
           </button>
         )}
         {(props.position || props.company) && (
-          <h4>
+          <h4 className="text-md italic text-gray-600">
             {props.position}
             {props.company ? ", " + props.company : ""}
           </h4>
         )}
         {props.about && (
           <>
-            <h4 className="text-cyan-400 underline"> &nbsp;About&nbsp; </h4>
-            <p>{props.about}</p>
+            <h4 className="text-cyan-400 font-bold mt-2"> &nbsp;About&nbsp; </h4>
+            <i>{props.about}</i>
           </>
         )}
         {props.higherEd && (
           <>
-            <h2 className="text-cyan-600 underline">Higher Education</h2>
-            <p>{props.higherEd}</p>
-            <br />
+            <h2 className="text-cyan-400 font-bold mt-2">Higher Education</h2>
+            <i>{props.higherEd}</i>
           </>
         )}
         {props.attributes && (
           <>
-            <h2 className="text-cyan-400 underline">Related Attributes</h2>
-            <p>{props.attributes}</p>
+            <h2 className="text-cyan-400 font-bold mt-2">Related Attributes</h2>
+            <i>{props.attributes}</i>
           </>
         )}
         {(props.city || props.state || props.country) && (
           <>
-            <h2 className="text-cyan-400 underline">Living In</h2>
-            <p>
+            <h2 className="text-cyan-400 font-bold mt-2">Living In</h2>
+            <i>
               {props.city}
               {props.state ? ", " + props.state : ""}
               {props.country ? ", " + props.country : ""}{" "}
-            </p>
-            <br />
+            </i>
           </>
         )}
         {sbuttons.length > 0 && (
           <>
-            <h2 className="text-cyan-400 underline pb-1">Contacts</h2>
+            <h2 className="text-cyan-400 font-bold mt-2 pb-1">Contacts</h2>
             <div className="bottom-0 mt-auto">{sbuttons}</div>
           </>
         )}
@@ -697,8 +700,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
   const [person, setPerson] = useState({}); //...gperson
-
-  // Handle input changes
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPerson((prev) => ({ ...prev, [name]: value }));
@@ -834,7 +836,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
       alert("New password and confirm password do not match.");
       return;
     }
-    if (newPass.length < 1 || newPass2 === pass) {
+    if (newPass.length < 1 || newPass === pass) {
       alert("New password must be at least 1 characters long \nand different from the old password.");
       return;
     }
