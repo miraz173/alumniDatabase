@@ -4,9 +4,26 @@ import bcrypt from "bcrypt";
 import mysql from "mysql2";
 import cors from "cors";
 
+let i = 0;
 let saltRounds = 10;
 const port = process.env.PORT || 3001;
 const app = express();
+
+app.use(cors());
+app.use(express.json());
+config();
+
+
+const dbPool = mysql.createPool({
+  host: process.env.db_host,
+  user: process.env.db_user,
+  port: process.env.db_port,
+  password: process.env.db_pass,
+  database: process.env.db_db,
+  ssl: {
+    rejectUnauthorized: false, // Aiven requires SSL
+  },
+});
 
 async function dbFetch(sql, params = []) {
   const getConnection = (pool) => {
@@ -46,7 +63,6 @@ async function dbFetch(sql, params = []) {
     if (connection) connection.release();
   }
 }//const user = await dbFetch("SELECT * FROM users WHERE roll = ?", [101]);
-
 
 async function dbTransaction(queries = []) {
   // queries = [{ sql: "...", params: [...] }, ...]
@@ -111,30 +127,47 @@ async function dbTransaction(queries = []) {
 // ]);
 
 
-app.use(cors());
-app.use(express.json());
-config();
 
-const dbPool = mysql.createPool({
-  host: process.env.db_host,
-  user: process.env.db_user,
-  port: process.env.db_port,
-  password: process.env.db_pass,
-  database: process.env.db_db,
-  ssl: {
-    rejectUnauthorized: false, // Aiven requires SSL
-  },
+app.listen(port, () => {
+  console.log(`Server is running on port ${port} since ${new Date().toLocaleString()}, ain't it?`);
+});
+
+app.get("/topKeywords", (req, res) => {
+  console.log(`Landing Page loaded for ${i++} times`);
+  let sql = `SELECT attribute, COUNT(*) AS attCount
+  FROM keywords
+  GROUP BY attribute
+  ORDER BY attCount DESC
+  LIMIT 6;`;
+  dbPool.getConnection((err, connection) => {
+    if (err) {
+      console.log("Error connecting to MySQL:", err);
+      res.sendStatus(500);
+    } else {
+      connection.query(sql, (error, results) => {
+        connection.release();
+        if (error) {
+          console.error("Database query error:", error);
+          res.sendStatus(500);
+        } else {
+          res.json(results);
+        }
+      });
+    }
+  });
 });
 
 app.get("/search", (req, res) => {//search by keywords
   const query = req.query.query;
   const searchQuery = (query && query.toString().trim().slice(1)) || "RUET";
+  // console.log("input text:", searchQuery, query);
 
   const keywords = searchQuery.split(",").map((keyword) => keyword.trim());
   const keywordList = keywords.map((keyword) => `'${keyword}'`).join(",");
   const keywordList2 = keywords
     .map((keyword) => `'%${keyword}%'`)
     .join(" or keywords.attribute like ");
+  // console.log(keywordList2, keywords);
 
   const sql = `
   select  a.*, 
@@ -173,6 +206,79 @@ app.get("/search", (req, res) => {//search by keywords
       });
     }
   });
+});
+
+app.post("/login", async (req, res) => {
+  const { roll, password } = req.body;
+
+  const query = "SELECT * FROM users WHERE roll = ?";
+  let results = await dbFetch(query, [roll]);
+  if (results.length > 0) {
+    const user = results[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (isMatch) {
+      console.log("Password matched!");
+      const sql = `
+                SELECT a.*, GROUP_CONCAT(k.attribute SEPARATOR ', ') AS keywords 
+                FROM alumni a
+                LEFT JOIN keywords k ON k.roll = a.roll
+                WHERE a.roll = ?
+                GROUP BY a.roll;
+                `;
+
+      dbFetch(sql, [roll]).then((personResults) => {
+        const person = personResults[0] || null;
+        console.log("person data: ", person);
+        res.json({ person });
+      });
+    } else {
+      console.log("Passwords don't match:", password, user.password);
+      res.status(401).json({ message: "Authentication failed" });
+    }
+  } else {
+    console.log("user not found !");
+    res.status(401).json({ message: "Authentication failed" });
+  }
+
+});
+
+app.post("/changePassword", async (req, res) => {
+  try {
+    const { roll, password, newPass } = req.body;
+
+    // Step 1: Get user by roll
+    const query1 = `SELECT * FROM users WHERE roll = ?;`;
+    const storedUserArr = await dbFetch(query1, [roll]);
+
+    if (!storedUserArr || storedUserArr.length === 0) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const storedUser = storedUserArr[0];
+
+    // Step 2: Compare provided password with stored hash
+    const isMatch = await bcrypt.compare(password, storedUser.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    // Step 3: Hash new password
+    const hashedNewPass = await bcrypt.hash(newPass, saltRounds);
+
+    // Step 4: Update password in DB
+    const query2 = `UPDATE users u SET u.password = ? WHERE u.roll = ?;`;
+    const result = await dbFetch(query2, [hashedNewPass, roll]);
+
+    console.log(
+      `Password change request sent by ${roll}. Result: ${JSON.stringify(result)}`
+    );
+    return res.json({ message: "Password updated successfully" });
+
+  } catch (err) {
+    console.error("Error in changePassword:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
 
 app.post("/editProfile", async (req, res) => {//edit profile
@@ -229,6 +335,7 @@ app.post("/editProfile", async (req, res) => {//edit profile
 
   strArr = [...new Set(strArr)]; // unique keywords
 
+  // Prepare sql3 query for deletion and insertion into keywords
   let sql3 = `DELETE FROM keywords WHERE roll = ?`;
   let sql4 = `INSERT INTO cse3100.keywords (roll, attribute) VALUES `;
 
@@ -334,129 +441,4 @@ app.post("/registerProfile", async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Server error", error: err });
   }
-});
-
-app.post("/changePassword", async (req, res) => {
-  try {
-    const { roll, password, newPass } = req.body;
-
-    // Step 1: Get user by roll
-    const query1 = `SELECT * FROM users WHERE roll = ?;`;
-    const storedUserArr = await dbFetch(query1, [roll]);
-
-    if (!storedUserArr || storedUserArr.length === 0) {
-      return res.status(400).json({ message: "User not found" });
-    }
-
-    const storedUser = storedUserArr[0];
-
-    // Step 2: Compare provided password with stored hash
-    const isMatch = await bcrypt.compare(password, storedUser.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Current password is incorrect" });
-    }
-
-    // Step 3: Hash new password
-    const hashedNewPass = await bcrypt.hash(newPass, saltRounds);
-
-    // Step 4: Update password in DB
-    const query2 = `UPDATE users u SET u.password = ? WHERE u.roll = ?;`;
-    const result = await dbFetch(query2, [hashedNewPass, roll]);
-
-    console.log(
-      `Password change request sent by ${roll}. Result: ${JSON.stringify(result)}`
-    );
-    return res.json({ message: "Password updated successfully" });
-
-  } catch (err) {
-    console.error("Error in changePassword:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-
-app.post("/login", (req, res) => {
-  const { roll, password } = req.body;
-  dbPool.getConnection((err, connection) => {
-    if (err) {
-      console.error("Error connecting to MySQL:", err);
-      res.sendStatus(500);
-    } else {
-      const query = "SELECT * FROM users WHERE roll = ?";
-      connection.query(query, [roll], async (error, results) => {
-        connection.release();
-        if (error) {
-          console.error("Database query error:", error);
-          res.sendStatus(500);
-        } else {
-          if (results.length > 0) {
-            const user = results[0];
-
-            const providedPasswordUtf8 = Buffer.from(//provided password is in plain text
-              password.trim(),
-              "utf-8"
-            ).toString("utf-8");
-            const storedPasswordUtf8 = Buffer.from(//stored password is in hashed form
-              user.password.trim(),
-              "utf-8"
-            ).toString("utf-8");
-
-            const isMatch = await bcrypt.compare(providedPasswordUtf8, storedPasswordUtf8);
-            if (isMatch) {
-              console.log("Password matched!");
-              const sql = `
-                SELECT a.*, GROUP_CONCAT(k.attribute SEPARATOR ', ') AS keywords 
-                FROM alumni a
-                LEFT JOIN keywords k ON k.roll = a.roll
-                WHERE a.roll = ?
-                GROUP BY a.roll;
-                `;
-
-              dbFetch(sql, [roll]).then((personResults) => {
-                const person = personResults[0] || null;
-                console.log("person data: ", person);
-                res.json({ person });
-              });
-            } else {
-              console.log("Passwords don't match:", password, user.password);
-              res.status(401).json({ message: "Authentication failed" });
-            }
-          } else {
-            console.log("user not found !");
-            res.status(401).json({ message: "Authentication failed" });
-          }
-        }
-      });
-    }
-  });
-});
-
-let i = 0;
-app.get("/topKeywords", (req, res) => {
-  console.log(`Landing Page loaded for ${i++} times`);
-  let sql = `SELECT attribute, COUNT(*) AS attCount
-  FROM keywords
-  GROUP BY attribute
-  ORDER BY attCount DESC
-  LIMIT 6;`;
-  dbPool.getConnection((err, connection) => {
-    if (err) {
-      console.log("Error connecting to MySQL:", err);
-      res.sendStatus(500);
-    } else {
-      connection.query(sql, (error, results) => {
-        connection.release();
-        if (error) {
-          console.error("Database query error:", error);
-          res.sendStatus(500);
-        } else {
-          res.json(results);
-        }
-      });
-    }
-  });
-});
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port} since ${new Date().toLocaleString()}, ain't it?`);
 });
