@@ -5,11 +5,13 @@ import React, { useState, useEffect, useRef } from "react";
 // const ipNport = "http://localhost:3001/";
 const ipNport = "https://alumniserver.up.railway.app/";
 
+// Helper: Format contacts fields into a single string
 const formatContacts = (person) => {
   return `phone ${person.phone || ""}, email ${person.email || ""}, facebook ${person.facebook || ""
     }, ${person.socialmedia || ""}`;
 };
 
+// Helper: Parse contacts string back into fields
 const parseContacts = (contacts = "") => {
   const parts = contacts.split(", ");
   return {
@@ -20,7 +22,7 @@ const parseContacts = (contacts = "") => {
   };
 };
 
-// 🔹 Reusable input component
+// Reusable input component
 const FormInput = ({
   label,
   name,
@@ -58,7 +60,7 @@ const FormInput = ({
   </div>
 );
 
-// 🔹 Reusable textarea component
+// Reusable textarea component
 const FormTextarea = ({
   label,
   name,
@@ -110,6 +112,7 @@ export function Background() {
       <div
         className="aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-[#ff80b5] to-[#9089fc] opacity-30"
         style={{
+          // clipPath: "polygon(24% 8%, 27% 7%, 25% 1%, 28% 5%, 34% 14%, 35% 10%, 40% 19%, 41% 15%, 43% 26%, 52% 26%, 61% 25%, 70% 25%, 76% 31%, 72% 34%, 74% 40%, 70% 44%, 64% 45%, 59% 51%, 58% 58%, 59% 66%, 63% 73%, 63% 69%, 66% 75%, 65% 60%, 70% 60%, 73% 53%, 77% 89%, 76% 95%, 72% 89%, 71% 100%, 67% 83%, 64% 77%, 60% 88%, 58% 82%, 57% 90%, 53% 91%, 49% 86%, 48% 94%, 45% 86%, 43% 94%, 39% 89%, 36% 93%, 35% 80%, 35% 69%, 32% 60%, 26% 58%, 23% 52%, 26% 41%, 33% 39%, 30% 31%, 27% 28%, 22% 24%, 22% 15%)",
           clipPath:
             "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",
         }}
@@ -118,7 +121,7 @@ export function Background() {
   );
 }
 
-export function KeyButton({ title, count="", num, upSrchTxt }) {
+export function KeyButton({ title, count = "", num, upSrchTxt }) {
   let btnclrs = {
     1: "bg-red-50 text-red-700 ring-red-600/10",
     2: "bg-gray-50 text-gray-600 ring-gray-500/10",
@@ -140,7 +143,7 @@ export function KeyButton({ title, count="", num, upSrchTxt }) {
         onClick={handleClick}
         className={`inline-flex items-center rounded-md px-2 py-1 m-1.5 text-sm font-medium ring-1 ring-inset ${btnclrs[num]}`}
       >
-        {title} {count!=="" &&<span className="ml-1 text-xs">({count})</span>}
+        {title} {count !== "" && <span className="ml-1 text-xs">({count})</span>}
       </button>
     );
   }
@@ -267,6 +270,8 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
 
   return (
     <>
+      {/*self-start makes the card's height remain independent of other card height in the same row of grid*/}
+      {/*flex flex-col  */}
       {pop === 0 && (
         <div className={`${snap} md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
           <div
@@ -326,6 +331,9 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
     for (let i = 0; i < pArr.length; i++) {
       pArr[i] = pArr[i].trim();
       let scl = pArr[i].split(" ");
+      // if (scl.length > 2) {
+      //   scl.shift();
+      // }
       if (!scl[1]) {
         continue;
       }
@@ -689,7 +697,8 @@ export function ProfileEdit({ gperson, updateLogged }) {
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
   const [person, setPerson] = useState({}); //...gperson
-  
+
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPerson((prev) => ({ ...prev, [name]: value }));
@@ -825,6 +834,10 @@ export function ProfileEdit({ gperson, updateLogged }) {
       alert("New password and confirm password do not match.");
       return;
     }
+    if (newPass.length < 1 || newPass2 === pass) {
+      alert("New password must be at least 1 characters long \nand different from the old password.");
+      return;
+    }
     let request = { roll: person.roll, password: pass, newPass: newPass };
     axios
       .post(ipNport + "changePassword", request)
@@ -845,6 +858,8 @@ export function ProfileEdit({ gperson, updateLogged }) {
 
   return (
     <>
+      {/* snap-start */}
+
       <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-slate-200 mt-4 mx-auto justify-center">
         Change Password
       </h2>
@@ -861,6 +876,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
           </label>
           <div className="mt-2">
             <input
+              required
               type="password"
               name="password"
               id="password"
@@ -881,6 +897,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
           </label>
           <div className="mt-2">
             <input
+              required
               type="password"
               name="newPassword"
               id="newPassword"
@@ -901,6 +918,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
           </label>
           <div className="mt-2">
             <input
+              required
               type="password"
               name="newPassword2"
               id="newPassword2"
@@ -1128,6 +1146,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
   const [newPass2, setNewPass2] = useState("");
   const [person, setPerson] = useState({});
 
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPerson((prev) => ({ ...prev, [name]: value }));
@@ -1135,6 +1154,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
 
   useEffect(() => {
     setPerson((prev) => {
+      // Build contacts string
       const contacts = [
         prev.phone ? `phone ${prev.phone}` : null,
         prev.email ? `email ${prev.email}` : null,
@@ -1144,6 +1164,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
         .filter(Boolean)
         .join(", ");
 
+      // Build keywords string
       const keywords = [
         prev.attributes,
         prev.state,
@@ -1173,6 +1194,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
     }
   }, [gperson]);
 
+  // Handle form submit
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -1453,5 +1475,3 @@ export function RegisterProfile({ gperson, updateLogged }) {
     </>
   );
 }
-
-
