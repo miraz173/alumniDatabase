@@ -770,6 +770,8 @@ export function ProfileEdit({ gperson, updateLogged }) {
       ", " +
       person.socialmedia;
 
+    console.log("--- Submitting profile edit:", person.about);
+
     axios
       .post(ipNport + "editProfile", person)
       .then((response) => {
@@ -1477,3 +1479,4 @@ export function RegisterProfile({ gperson, updateLogged }) {
     </>
   );
 }
+
