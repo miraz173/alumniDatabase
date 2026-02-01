@@ -302,6 +302,8 @@ app.post("/editProfile", async (req, res) => {//edit profile
     person.roll,
     person.password,
   ];
+  console.log("--- ",person.about)
+  console.log("  --- ",person.about.replace(/\n/g, "; ").trim())
   // Using INSERT ... SELECT ... WHERE EXISTS to ensure roll and password match
   // Using ON DUPLICATE KEY UPDATE to handle existing records
   const sql2 = `INSERT INTO alumni (roll, name, thumbnail, image, position, company, higherEd, city, state, country, contacts, about, attributes)
@@ -444,6 +446,7 @@ app.post("/registerProfile", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err });
   }
 });
+
 
 
 
