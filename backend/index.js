@@ -337,7 +337,7 @@ app.post("/editProfile", async (req, res) => {//edit profile
 
   // Prepare sql3 query for deletion and insertion into keywords
   let sql3 = `DELETE FROM keywords WHERE roll = ?`;
-  let sql4 = `INSERT INTO cse3100.keywords (roll, attribute) VALUES `;
+  let sql4 = `INSERT INTO keywords (roll, attribute) VALUES `;
 
   let rollKeywordPairs = [];
   strArr.forEach((item, index) => {
@@ -442,4 +442,5 @@ app.post("/registerProfile", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err });
   }
 });
+
 
