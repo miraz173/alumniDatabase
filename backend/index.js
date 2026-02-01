@@ -298,36 +298,41 @@ app.post("/editProfile", async (req, res) => {//edit profile
     person.contacts,
     person.about,
     person.attributes,
-    //repeated for sql2 auth purpose
-    person.roll,
-    person.password,
   ];
-  console.log("--- ",person.about)
-  console.log("  --- ",person.about.replace(/\n/g, "; ").trim())
-  // Using INSERT ... SELECT ... WHERE EXISTS to ensure roll and password match
+  // 1. Verify credentials first (very important for security)
+  const users = await dbFetch(
+    "SELECT * FROM users WHERE roll = ?",
+    [person.roll]
+  );
+  console.log(users[0], person.password);
+  
+  const isMatch = await bcrypt.compare(person.password, users[0].password);
+
+  if (!users || users.length === 0 || !isMatch) {
+    return res.status(403).json({ error: "Invalid roll or password" });
+  }
+
+  // 2. If authenticated → upsert the profile
   // Using ON DUPLICATE KEY UPDATE to handle existing records
-  const sql2 = `INSERT INTO alumni (roll, name, thumbnail, image, position, company, higherEd, city, state, country, contacts, about, attributes)
-  SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-  FROM DUAL
-  WHERE EXISTS (
-    SELECT 1
-    FROM users
-    WHERE users.roll = ? AND users.password = ?
-  )
+  const sql2 = `
+  INSERT INTO alumni (
+    roll, name, thumbnail, image, position, company, higherEd,
+    city, state, country, contacts, about, attributes
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON DUPLICATE KEY UPDATE
-    name = VALUES(name),
-    thumbnail = VALUES(thumbnail),
-    image = VALUES(image),
-    position = VALUES(position),
-    company = VALUES(company),
-    higherEd = VALUES(higherEd),
-    city = VALUES(city),
-    state = VALUES(state),
-    country = VALUES(country),
-    contacts = VALUES(contacts),
-    about = VALUES(about),
-    attributes = VALUES(attributes);
-  `;
+    name       = VALUES(name),
+    thumbnail  = VALUES(thumbnail),
+    image      = VALUES(image),
+    position   = VALUES(position),
+    company    = VALUES(company),
+    higherEd   = VALUES(higherEd),
+    city       = VALUES(city),
+    state      = VALUES(state),
+    country    = VALUES(country),
+    contacts   = VALUES(contacts),
+    about      = VALUES(about),
+    attributes = VALUES(attributes)
+`;
 
   // Build keyword list
   let str = `${person.name},${person.roll},${person.position},${person.company},${person.higherEd},${person.city},${person.state},${person.country},${person.attributes}`;
@@ -360,7 +365,7 @@ app.post("/editProfile", async (req, res) => {//edit profile
     { sql: sql4, params: rollKeywordPairs }
   ]);
 
-  console.log(`profile edit request sent by ${person.roll}: ${results}`);
+  console.log(`profile edit request sent by ${person.roll}: ${results[0][0]}, ${results[1]}, ${results[2]}`);
   res.json({ message: "Profile update request processed.", status: "success" });
 });
 
@@ -438,7 +443,7 @@ app.post("/registerProfile", async (req, res) => {
       { sql: sql3, params: rollKeywordPairs }
     ]);
 
-    console.log(`Profile creation request by ${person.roll}: ${results}`);
+    console.log(`Profile creation request by ${person.roll}: ${results[0]}`);
     res.json({ message: "Profile created successfully.", status: "success" });
 
   } catch (err) {
