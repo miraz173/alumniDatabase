@@ -330,7 +330,7 @@ app.post("/editProfile", async (req, res) => {//edit profile
   let strArr = str
     .split(",")
     .map((item) => item.trim())
-    .filter((item) => (item !== "" && item !== undefined && item !== null)) // Remove empty elements
+    .filter((item) => (item !== "" && item !== undefined && item !== null && item !== "undefined")) // Remove empty elements
     .map((item) => item.toLowerCase());
 
   strArr = [...new Set(strArr)]; // unique keywords
@@ -413,7 +413,7 @@ app.post("/registerProfile", async (req, res) => {
     let strArr = str
       .split(",")
       .map((item) => item.trim())
-      .filter((item) => (item !== "" && item !== undefined && item !== null)) // Remove empty elements
+      .filter((item) => (item !== "" && item !== undefined && item !== null && item !== "undefined")) // Remove empty elements
       .map((item) => item.toLowerCase());
 
     strArr = [...new Set(strArr)]; // unique keywords
@@ -442,3 +442,4 @@ app.post("/registerProfile", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err });
   }
 });
+
