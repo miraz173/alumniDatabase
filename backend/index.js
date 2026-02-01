@@ -298,6 +298,8 @@ app.post("/editProfile", async (req, res) => {//edit profile
     person.contacts,
     person.about,
     person.attributes,
+    //repeated for sql2 auth purpose
+    person.roll,
     person.password,
   ];
   // Using INSERT ... SELECT ... WHERE EXISTS to ensure roll and password match
@@ -308,7 +310,7 @@ app.post("/editProfile", async (req, res) => {//edit profile
   WHERE EXISTS (
     SELECT 1
     FROM users
-    WHERE users.roll = roll AND users.password = ?
+    WHERE users.roll = ? AND users.password = ?
   )
   ON DUPLICATE KEY UPDATE
     name = VALUES(name),
@@ -442,5 +444,6 @@ app.post("/registerProfile", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err });
   }
 });
+
 
 
