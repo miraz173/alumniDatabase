@@ -193,7 +193,7 @@ export function SocialButton(props) {
       "M13.492 18.136v-5.272h1.665v7.022H.13v-7.022h1.665v5.272z M3.632 12.364l8.173 1.795.346-1.727-8.173-1.796-.346 1.728zm1.082-4.091l7.567 3.704.692-1.59-7.568-3.728-.691 1.614zm2.097-3.91l6.421 5.614 1.06-1.34L7.87 3.022l-1.06 1.34zM10.962.206L9.622 1.25l4.973 7.045 1.34-1.045L10.962.205zM3.46 16.364h8.346v-1.75H3.46v1.75z",
     codeforces:
       "M4.5 7.5C5.328 7.5 6 8.172 6 9v10.5c0 .828-.672 1.5-1.5 1.5h-3C.673 21 0 20.328 0 19.5V9c0-.828.673-1.5 1.5-1.5h3zm9-4.5c.828 0 1.5.672 1.5 1.5v15c0 .828-.672 1.5-1.5 1.5h-3c-.827 0-1.5-.672-1.5-1.5v-15c0-.828.673-1.5 1.5-1.5h3zm9 7.5c.828 0 1.5.672 1.5 1.5v7.5c0 .828-.672 1.5-1.5 1.5h-3c-.828 0-1.5-.672-1.5-1.5V12c0-.828.672-1.5 1.5-1.5h3z",
-    };
+  };
 
   let link =
     props.title == "phone"
@@ -392,9 +392,10 @@ export function PersonDesc({ props, openPop, snap = 'snap-start' }) {
           <>
             <h2 className="text-cyan-400 font-bold mt-2">Living In</h2>
             <i>
-              {props.city}
-              {props.state ? ", " + props.state : ""}
-              {props.country ? ", " + props.country : ""}{" "}
+              {[props.city, props.state, props.country]
+                .filter(Boolean)           // remove falsy values (null, "", undefined, false)
+                .join(", ")
+              }
             </i>
           </>
         )}
@@ -700,7 +701,7 @@ export function ProfileEdit({ gperson, updateLogged }) {
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
   const [person, setPerson] = useState({}); //...gperson
-  
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPerson((prev) => ({ ...prev, [name]: value }));
@@ -770,9 +771,6 @@ export function ProfileEdit({ gperson, updateLogged }) {
       ", " +
       person.socialmedia;
 
-    console.log("--- Submitting profile edit:", person.about);
-    person.about = person.about.replace(/\n/g, "; ").trim();
-    console.log("->- Submitting profile edit:", person.about);
     axios
       .post(ipNport + "editProfile", person)
       .then((response) => {
