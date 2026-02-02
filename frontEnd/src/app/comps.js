@@ -289,7 +289,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
               >
                 {props.name}
               </button>
-              <p style={{ fontSize: "1.5vh" }} className="max-w-[70vw] md:max-w-[30vw] lg:max-w-[25vw]">
+              <p style={{ fontSize: "1.5vh", maxWidth: "70%"}} >
                 {props.position}
                 {props.company ? "," : ""} {props.company}
               </p>
@@ -1478,6 +1478,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
     </>
   );
 }
+
 
 
 
