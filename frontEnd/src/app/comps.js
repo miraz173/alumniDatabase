@@ -281,7 +281,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
             className="flex flex-wrap items-center p-3"
             style={{ justifyContent: "space-between" }}
           >
-            <div className="text-left pl-[1vw]">
+            <div className="text-left pl-[1vw] max-w-[75%]" style={{maxWidth: "75%"}}>
               <button
                 // style={{ fontSize: "2vh", color: "rgb(25, 23, 23)" }}
                 className="font-bold hover:underline text-blue-600"
@@ -289,7 +289,7 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
               >
                 {props.name}
               </button>
-              <p style={{ fontSize: "1.5vh", maxWidth: "70%"}} >
+              <p style={{ fontSize: "1.5vh"}} >
                 {props.position}
                 {props.company ? "," : ""} {props.company}
               </p>
@@ -1478,6 +1478,7 @@ export function RegisterProfile({ gperson, updateLogged }) {
     </>
   );
 }
+
 
 
 
