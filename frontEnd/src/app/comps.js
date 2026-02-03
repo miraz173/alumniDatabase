@@ -274,9 +274,9 @@ export function PersonCard({ props, upSrchTxt, snap = 'snap-start' }) {
   return (
     <>
       {/*self-start makes the card's height remain independent of other card height in the same row of grid*/}
-      {/*flex flex-col  */}
+      {/*flex flex-col   md:max-[50vh] lg:max-h-[30vh]*/}
       {pop === 0 && (
-        <div className={`${snap} flex flex-col md:max-[50vh] lg:max-h-[30vh] text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
+        <div className={`${snap} flex flex-col text-center min-w-[20vw] rounded-md bg-pink-50 m-5 font-medium text-teal-800 ring-1 ring-inset ring-yellow-600/20`}>
           <div
             className="flex flex-wrap items-center p-3"
             style={{ justifyContent: "space-between" }}
