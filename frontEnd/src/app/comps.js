@@ -3,7 +3,8 @@ import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
 
 // const ipNport = "http://localhost:3001/";
-const ipNport = "https://alumniserver.up.railway.app/";
+// const ipNport = "https://alumniserver.up.railway.app/";
+const ipNport = "/api_server/";
 
 // Helper: Format contacts fields into a single string
 const formatContacts = (person) => {
